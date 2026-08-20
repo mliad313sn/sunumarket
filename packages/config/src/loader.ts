@@ -37,6 +37,7 @@ export interface ZoneFeature {
 export class PackRegistry {
   private packs = new Map<string, CountryPack>();
   private overrides = new Map<string, Map<string, boolean>>();
+  private routeOverrides = new Map<string, { primary: string; fallback: string | null }>();
   private loadedFrom: string;
 
   constructor(packsDir: string = PACKS_DIR) {
@@ -80,8 +81,20 @@ export class PackRegistry {
   }
 
   clearOverrides(country?: string): void {
-    if (country) this.overrides.delete(country.toUpperCase());
-    else this.overrides.clear();
+    if (country) {
+      this.overrides.delete(country.toUpperCase());
+      for (const k of [...this.routeOverrides.keys()]) {
+        if (k.startsWith(`${country.toUpperCase()}:`)) this.routeOverrides.delete(k);
+      }
+    } else {
+      this.overrides.clear();
+      this.routeOverrides.clear();
+    }
+  }
+
+  /** Admin runtime route flip (FR-44b): change primary/fallback without redeploy. */
+  setRouteOverride(country: string, method: string, primary: string, fallback: string | null): void {
+    this.routeOverrides.set(`${country.toUpperCase()}:${method}`, { primary, fallback });
   }
 
   /**
@@ -109,6 +122,8 @@ export class PackRegistry {
   }
 
   providerRoute(country: string, method: string): { primary: string; fallback: string | null } {
+    const override = this.routeOverrides.get(`${country.toUpperCase()}:${method}`);
+    if (override) return override;
     const route = this.get(country).provider_routes.find((r) => r.method === method);
     if (!route) throw new Error(`no provider route for ${method} in ${country}`);
     return { primary: route.primary, fallback: route.fallback };

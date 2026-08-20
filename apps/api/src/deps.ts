@@ -17,6 +17,8 @@ import { PayoutsService } from "./modules/payouts/payouts.service.js";
 import { ReconciliationService } from "./modules/reconciliation/reconciliation.service.js";
 import { DeliveryService } from "./modules/delivery/delivery.service.js";
 import { MockPartnerAdapter, type DeliveryPartnerAdapter } from "./modules/delivery/partner-adapter.js";
+import { TrustService } from "./modules/trust/trust.service.js";
+import { AdminService } from "./modules/admin/admin.service.js";
 
 export interface AppDeps {
   prisma: PrismaClient;
@@ -39,6 +41,8 @@ export interface AppDeps {
   reconciliation: ReconciliationService;
   delivery: DeliveryService;
   mockPartner: MockPartnerAdapter;
+  trust: TrustService;
+  admin: AdminService;
 }
 
 export function buildDeps(overrides: Partial<AppDeps> = {}): AppDeps {
@@ -65,5 +69,8 @@ export function buildDeps(overrides: Partial<AppDeps> = {}): AppDeps {
   const partnerAdapters = new Map<string, DeliveryPartnerAdapter>([["MOCK", mockPartner]]);
   const delivery =
     overrides.delivery ?? new DeliveryService(prisma, orders, kyc, mockPiSpi, messaging, partnerAdapters);
-  return { prisma, packs, messaging, velocity, fraud, auth, kyc, catalog, geo, orders, router, payments, mockAggA, mockAggB, mockPiSpi, ledger, payouts, reconciliation, delivery, mockPartner };
+  const trust = overrides.trust ?? new TrustService(prisma);
+  const admin = overrides.admin ?? new AdminService(prisma, packs);
+  payouts.setFrozenProvider((sellerId) => trust.frozenAmountFor(sellerId));
+  return { prisma, packs, messaging, velocity, fraud, auth, kyc, catalog, geo, orders, router, payments, mockAggA, mockAggB, mockPiSpi, ledger, payouts, reconciliation, delivery, mockPartner, trust, admin };
 }

@@ -2,9 +2,9 @@
 
 > Updated every working session per Playbook rule 0.2. This file is the recovery point.
 
-- **Current phase:** 10 — Trust, disputes, moderation, admin
-- **Checkpoint:** Phase 9 closed green (gate-9). Dispatch machine (exhaustive), broadcast first-accept (20-parallel race → 1 winner), rider COD full cycle w/ OTP proof gate, offline-idempotent status sync, PI-SPI remittance + COD invariant, incidents → delivery_issue → refund, partner adapter w/ signed webhooks (replay/tamper), PARTNER→RIDER fallback, rider isolation. 154 tests total.
-- **Exact next action:** Phase 10 — ratings post-delivered, disputes w/ scoped payout freeze + auto-attached proof, reports/takedowns, admin console endpoints (global phone search, timelines, config panels incl. provider route flip + MANUAL_TRANSFER toggle), audit log.
+- **Current phase:** 11 — PWA hardening, i18n, data-saver
+- **Checkpoint:** Phase 10 closed green (gate-10). Ratings post-delivered w/ dup guard, disputes w/ scoped payout freeze + auto-attached proof + admin resolution→refund, reports/takedowns audited, admin dashboard/phone search/timeline/audit, config panels: route flip applies to next attempt (no deploy), MANUAL_TRANSFER toggle on/off flips checkout. 162 tests.
+- **Exact next action:** Phase 11 — web PWA (marketplace, product, checkout w/ DC-14 USSD screen, tracking), i18n FR/EN, data-saver mode, service worker offline queue, analytics events; then Phase 12 release artifacts.
 - **Branch:** `claude/execute-zip-instructions-2qmy1f`
 
 ## Environment notes (this build sandbox)
@@ -19,3 +19,4 @@
 - 2026-08-20 gates 4-6 PASSED: catalog suite (6), geo suite (5, incl. PostGIS cross-check + retention idempotent), orders suite (9: race 20→1, idempotency, expiry-once, illegal transitions, tracking rotation, inbox isolation); shared order machine exhaustive sweep + geo fixtures 20/20.
 - 2026-08-20 gate-7+8 PASSED: see docs/reports/GATE-8-SUMMARY.md. 129 tests; API coverage 91.8%; turbo globalEnv fixed so CI runs DB suites.
 - 2026-08-20 gate-9 PASSED: delivery suite 9/9 stable ×2; golden paths 5,6,7 green; COD invariant Σcollected=Σremitted+outstanding proven from append-only ledger.
+- 2026-08-20 gate-10 PASSED: trust/admin suite 8/8; config-change tests prove no-deploy flips; support scenario incl. reconciliation-flag resolution end-to-end.

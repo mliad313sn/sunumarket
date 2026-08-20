@@ -23,6 +23,12 @@ export class PayoutError extends Error {
 export class PayoutsService {
   /** Aggregator fallback recorder (mock rail). */
   readonly aggregatorPayouts: Array<{ sellerId: string; amountMinor: bigint }> = [];
+  /** Scoped dispute freeze (FR-40): injected to avoid a service cycle. */
+  private frozenProvider: (sellerId: string) => Promise<bigint> = async () => 0n;
+
+  setFrozenProvider(fn: (sellerId: string) => Promise<bigint>): void {
+    this.frozenProvider = fn;
+  }
 
   constructor(
     private readonly prisma: PrismaClient,
@@ -50,8 +56,12 @@ export class PayoutsService {
     await this.kyc.assertPayoutWithinLimit(sellerId, amountMinor);
 
     const balance = await this.ledger.balance("seller", sellerId, "XOF");
-    if (balance < amountMinor) {
-      throw new PayoutError("insufficient_balance", "solde insuffisant");
+    const frozen = await this.frozenProvider(sellerId);
+    if (balance - frozen < amountMinor) {
+      throw new PayoutError(
+        "insufficient_balance",
+        frozen > 0n ? "solde bloqué par un litige en cours (gel ciblé)" : "solde insuffisant"
+      );
     }
 
     // PI-SPI first, aggregator fallback (FR-20).
