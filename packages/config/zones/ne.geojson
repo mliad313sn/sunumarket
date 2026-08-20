@@ -1,0 +1,79 @@
+{
+ "type": "FeatureCollection",
+ "features": [
+  {
+   "type": "Feature",
+   "properties": {
+    "name": "Plateau",
+    "city": "Niamey",
+    "band": 1,
+    "fee_minor": "1000",
+    "currency": "XOF"
+   },
+   "geometry": {
+    "type": "Polygon",
+    "coordinates": [
+     [
+      [
+       2.09,
+       13.5
+      ],
+      [
+       2.1399999999999997,
+       13.5
+      ],
+      [
+       2.1399999999999997,
+       13.54
+      ],
+      [
+       2.09,
+       13.54
+      ],
+      [
+       2.09,
+       13.5
+      ]
+     ]
+    ]
+   }
+  },
+  {
+   "type": "Feature",
+   "properties": {
+    "name": "Lazaret",
+    "city": "Niamey",
+    "band": 2,
+    "fee_minor": "1500",
+    "currency": "XOF"
+   },
+   "geometry": {
+    "type": "Polygon",
+    "coordinates": [
+     [
+      [
+       2.1,
+       13.54
+      ],
+      [
+       2.16,
+       13.54
+      ],
+      [
+       2.16,
+       13.59
+      ],
+      [
+       2.1,
+       13.59
+      ],
+      [
+       2.1,
+       13.54
+      ]
+     ]
+    ]
+   }
+  }
+ ]
+}

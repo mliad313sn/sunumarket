@@ -1,0 +1,79 @@
+{
+ "type": "FeatureCollection",
+ "features": [
+  {
+   "type": "Feature",
+   "properties": {
+    "name": "Centre-ville",
+    "city": "Lomé",
+    "band": 1,
+    "fee_minor": "1000",
+    "currency": "XOF"
+   },
+   "geometry": {
+    "type": "Polygon",
+    "coordinates": [
+     [
+      [
+       1.2,
+       6.12
+      ],
+      [
+       1.25,
+       6.12
+      ],
+      [
+       1.25,
+       6.16
+      ],
+      [
+       1.2,
+       6.16
+      ],
+      [
+       1.2,
+       6.12
+      ]
+     ]
+    ]
+   }
+  },
+  {
+   "type": "Feature",
+   "properties": {
+    "name": "Agoè",
+    "city": "Lomé",
+    "band": 2,
+    "fee_minor": "1500",
+    "currency": "XOF"
+   },
+   "geometry": {
+    "type": "Polygon",
+    "coordinates": [
+     [
+      [
+       1.2,
+       6.17
+      ],
+      [
+       1.26,
+       6.17
+      ],
+      [
+       1.26,
+       6.22
+      ],
+      [
+       1.2,
+       6.22
+      ],
+      [
+       1.2,
+       6.17
+      ]
+     ]
+    ]
+   }
+  }
+ ]
+}

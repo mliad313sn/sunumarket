@@ -1,0 +1,44 @@
+{
+  "country": "NE",
+  "version": 1,
+  "status": "draft",
+  "currency": "XOF",
+  "language_default": "fr",
+  "phone": {
+    "calling_code": "+227",
+    "regex": "^\\+227[89]\\d{7}$",
+    "example": "+22790123456"
+  },
+  "methods": [
+    { "type": "AIRTEL_MONEY", "enabled": true, "order": 1, "label": "Airtel Money", "ussd_confirm": true, "ussd_dial_code": "*436#", "market_share_note": "airtel/moov/zamani mix (2026-08, planning input — Goal §3.2 wave 2); AIRTEL_MONEY is a schema-ready type proving the registry extends without refactor (DC-5)" },
+    { "type": "MOOV_MONEY", "enabled": true, "order": 2, "label": "Moov Money", "ussd_confirm": true, "ussd_dial_code": "*555#" },
+    { "type": "COD", "enabled": true, "order": 3, "label": "Paiement à la livraison", "ussd_confirm": false },
+    { "type": "PI_SPI", "enabled": true, "order": 4, "label": "PI-SPI — payez depuis n'importe quel portefeuille (incl. Zamani Cash)", "ussd_confirm": false },
+    { "type": "MANUAL_TRANSFER", "enabled": false, "order": 99, "label": "Transfert manuel (preuve)", "ussd_confirm": false }
+  ],
+  "provider_routes": [
+    { "method": "AIRTEL_MONEY", "primary": "AGG_B", "fallback": "AGG_A" },
+    { "method": "MOOV_MONEY", "primary": "AGG_B", "fallback": "AGG_A" },
+    { "method": "PI_SPI", "primary": "PISPI", "fallback": null }
+  ],
+  "fees_taxes": {
+    "pass_through": [
+      { "kind": "provider_fee", "bearer": "seller", "display_fr": "Frais opérateur inclus", "display_en": "Operator fee included", "bps": 150 },
+      { "kind": "platform_fee", "bearer": "seller", "display_fr": "Commission SunuMarket", "display_en": "SunuMarket fee", "bps": 200 }
+    ]
+  },
+  "kyc_tiers": {
+    "tier0": { "payout_daily_minor": "0", "cod_outstanding_minor": "0" },
+    "tier1": { "payout_daily_minor": "150000", "cod_outstanding_minor": "0" },
+    "tier2": { "payout_daily_minor": "1500000", "cod_outstanding_minor": "75000" }
+  },
+  "sms_sender_ids": ["SUNUMKT"],
+  "compliance_checklist": [
+    { "id": "dpa_registration", "label_fr": "Déclaration HAPDP Niger", "authority": "HAPDP", "status": "todo" },
+    { "id": "tos_privacy_fr", "label_fr": "CGU et politique de confidentialité localisées (FR)", "authority": "interne", "status": "todo" },
+    { "id": "prohibited_items", "label_fr": "Liste des articles interdits (NE)", "authority": "interne", "status": "todo" },
+    { "id": "tax_disclosure", "label_fr": "Affichage transparent des frais/taxes avant paiement", "authority": "interne", "status": "todo" }
+  ],
+  "zones_ref": "zones/ne.geojson",
+  "market_data_date": "2026-08-20"
+}

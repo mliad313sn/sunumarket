@@ -1,0 +1,79 @@
+{
+ "type": "FeatureCollection",
+ "features": [
+  {
+   "type": "Feature",
+   "properties": {
+    "name": "Centre (Ganhi)",
+    "city": "Cotonou",
+    "band": 1,
+    "fee_minor": "1000",
+    "currency": "XOF"
+   },
+   "geometry": {
+    "type": "Polygon",
+    "coordinates": [
+     [
+      [
+       2.4,
+       6.34
+      ],
+      [
+       2.4499999999999997,
+       6.34
+      ],
+      [
+       2.4499999999999997,
+       6.38
+      ],
+      [
+       2.4,
+       6.38
+      ],
+      [
+       2.4,
+       6.34
+      ]
+     ]
+    ]
+   }
+  },
+  {
+   "type": "Feature",
+   "properties": {
+    "name": "Akpakpa",
+    "city": "Cotonou",
+    "band": 2,
+    "fee_minor": "1500",
+    "currency": "XOF"
+   },
+   "geometry": {
+    "type": "Polygon",
+    "coordinates": [
+     [
+      [
+       2.45,
+       6.34
+      ],
+      [
+       2.5100000000000002,
+       6.34
+      ],
+      [
+       2.5100000000000002,
+       6.39
+      ],
+      [
+       2.45,
+       6.39
+      ],
+      [
+       2.45,
+       6.34
+      ]
+     ]
+    ]
+   }
+  }
+ ]
+}

@@ -1,0 +1,45 @@
+{
+  "country": "BF",
+  "version": 1,
+  "status": "active",
+  "currency": "XOF",
+  "language_default": "fr",
+  "phone": {
+    "calling_code": "+226",
+    "regex": "^\\+226(0?[567])\\d{7}$",
+    "example": "+22670123456"
+  },
+  "methods": [
+    { "type": "ORANGE_MONEY", "enabled": true, "order": 1, "label": "Orange Money", "ussd_confirm": true, "ussd_dial_code": "*144#", "market_share_note": "dominant (2026-08, planning input); no Wave in BF — USSD-confirm UX and SMS weigh more (Goal §3.2)" },
+    { "type": "MOOV_MONEY", "enabled": true, "order": 2, "label": "Moov Money", "ussd_confirm": true, "ussd_dial_code": "*555#" },
+    { "type": "COD", "enabled": true, "order": 3, "label": "Paiement à la livraison", "ussd_confirm": false },
+    { "type": "PI_SPI", "enabled": true, "order": 4, "label": "PI-SPI — payez depuis n'importe quel portefeuille (incl. Coris Money)", "ussd_confirm": false, "market_share_note": "Coris Money (bank wallet) reachable via PI-SPI interop" },
+    { "type": "MANUAL_TRANSFER", "enabled": false, "order": 99, "label": "Transfert manuel (preuve)", "ussd_confirm": false }
+  ],
+  "provider_routes": [
+    { "method": "ORANGE_MONEY", "primary": "AGG_A", "fallback": "AGG_B" },
+    { "method": "MOOV_MONEY", "primary": "AGG_B", "fallback": "AGG_A" },
+    { "method": "PI_SPI", "primary": "PISPI", "fallback": null }
+  ],
+  "fees_taxes": {
+    "note": "Lower smartphone penetration: SMS notifications default ON (DC-15).",
+    "pass_through": [
+      { "kind": "provider_fee", "bearer": "seller", "display_fr": "Frais opérateur inclus", "display_en": "Operator fee included", "bps": 150 },
+      { "kind": "platform_fee", "bearer": "seller", "display_fr": "Commission SunuMarket", "display_en": "SunuMarket fee", "bps": 200 }
+    ]
+  },
+  "kyc_tiers": {
+    "tier0": { "payout_daily_minor": "0", "cod_outstanding_minor": "0" },
+    "tier1": { "payout_daily_minor": "150000", "cod_outstanding_minor": "0" },
+    "tier2": { "payout_daily_minor": "1500000", "cod_outstanding_minor": "75000" }
+  },
+  "sms_sender_ids": ["SUNUMKT"],
+  "compliance_checklist": [
+    { "id": "dpa_registration", "label_fr": "Déclaration CIL (Commission de l'Informatique et des Libertés)", "authority": "CIL", "status": "todo" },
+    { "id": "tos_privacy_fr", "label_fr": "CGU et politique de confidentialité localisées (FR)", "authority": "interne", "status": "todo" },
+    { "id": "prohibited_items", "label_fr": "Liste des articles interdits (BF)", "authority": "interne", "status": "todo" },
+    { "id": "tax_disclosure", "label_fr": "Affichage transparent des frais/taxes avant paiement", "authority": "interne", "status": "todo" }
+  ],
+  "zones_ref": "zones/bf.geojson",
+  "market_data_date": "2026-08-20"
+}

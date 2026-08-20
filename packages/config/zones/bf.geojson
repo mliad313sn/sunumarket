@@ -1,0 +1,116 @@
+{
+ "type": "FeatureCollection",
+ "features": [
+  {
+   "type": "Feature",
+   "properties": {
+    "name": "Centre (Koulouba)",
+    "city": "Ouagadougou",
+    "band": 1,
+    "fee_minor": "750",
+    "currency": "XOF"
+   },
+   "geometry": {
+    "type": "Polygon",
+    "coordinates": [
+     [
+      [
+       -1.54,
+       12.34
+      ],
+      [
+       -1.49,
+       12.34
+      ],
+      [
+       -1.49,
+       12.39
+      ],
+      [
+       -1.54,
+       12.39
+      ],
+      [
+       -1.54,
+       12.34
+      ]
+     ]
+    ]
+   }
+  },
+  {
+   "type": "Feature",
+   "properties": {
+    "name": "Ouaga 2000",
+    "city": "Ouagadougou",
+    "band": 2,
+    "fee_minor": "1250",
+    "currency": "XOF"
+   },
+   "geometry": {
+    "type": "Polygon",
+    "coordinates": [
+     [
+      [
+       -1.52,
+       12.28
+      ],
+      [
+       -1.46,
+       12.28
+      ],
+      [
+       -1.46,
+       12.33
+      ],
+      [
+       -1.52,
+       12.33
+      ],
+      [
+       -1.52,
+       12.28
+      ]
+     ]
+    ]
+   }
+  },
+  {
+   "type": "Feature",
+   "properties": {
+    "name": "Tanghin-Nord",
+    "city": "Ouagadougou",
+    "band": 3,
+    "fee_minor": "1750",
+    "currency": "XOF"
+   },
+   "geometry": {
+    "type": "Polygon",
+    "coordinates": [
+     [
+      [
+       -1.55,
+       12.4
+      ],
+      [
+       -1.48,
+       12.4
+      ],
+      [
+       -1.48,
+       12.450000000000001
+      ],
+      [
+       -1.55,
+       12.450000000000001
+      ],
+      [
+       -1.55,
+       12.4
+      ]
+     ]
+    ]
+   }
+  }
+ ]
+}

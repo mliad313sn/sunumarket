@@ -1,0 +1,50 @@
+{
+  "country": "SN",
+  "version": 1,
+  "status": "active",
+  "currency": "XOF",
+  "language_default": "fr",
+  "phone": {
+    "calling_code": "+221",
+    "regex": "^\\+221(7[05678])\\d{7}$",
+    "example": "+221771234567"
+  },
+  "methods": [
+    { "type": "WAVE", "enabled": true, "order": 1, "label": "Wave", "ussd_confirm": false, "market_share_note": "~55-60% of MM value (2026-08, planning input — Goal §3.2); no full self-service merchant API, reached via aggregator / Wave Business dynamic QR" },
+    { "type": "ORANGE_MONEY", "enabled": true, "order": 2, "label": "Orange Money", "ussd_confirm": true, "ussd_dial_code": "#144#", "market_share_note": "~25% (2026-08, planning input); merchant onboarding slow — start early (R-2)" },
+    { "type": "MIXX_BY_YAS", "enabled": true, "order": 3, "label": "Mixx by Yas", "ussd_confirm": true, "ussd_dial_code": "#150#", "market_share_note": "ex-Free Money (2026-08)" },
+    { "type": "COD", "enabled": true, "order": 4, "label": "Paiement à la livraison", "ussd_confirm": false },
+    { "type": "PI_SPI", "enabled": true, "order": 5, "label": "PI-SPI — payez depuis n'importe quel portefeuille", "ussd_confirm": false },
+    { "type": "CARD", "enabled": true, "order": 6, "label": "Carte bancaire", "ussd_confirm": false, "market_share_note": "minority method — diaspora/ceremonial (DC-1), never default" },
+    { "type": "MANUAL_TRANSFER", "enabled": false, "order": 99, "label": "Transfert manuel (preuve)", "ussd_confirm": false }
+  ],
+  "provider_routes": [
+    { "method": "WAVE", "primary": "AGG_A", "fallback": "AGG_B" },
+    { "method": "ORANGE_MONEY", "primary": "AGG_A", "fallback": "AGG_B" },
+    { "method": "MIXX_BY_YAS", "primary": "AGG_B", "fallback": "AGG_A" },
+    { "method": "PI_SPI", "primary": "PISPI", "fallback": null },
+    { "method": "CARD", "primary": "AGG_B", "fallback": "AGG_A" }
+  ],
+  "fees_taxes": {
+    "note": "SN transaction-tax pressure on MM (Goal §3.5, DC-11) — bearer config kept per-fee; COD permanently supported.",
+    "pass_through": [
+      { "kind": "provider_fee", "bearer": "seller", "display_fr": "Frais opérateur inclus", "display_en": "Operator fee included", "bps": 150 },
+      { "kind": "mm_transaction_tax", "bearer": "buyer", "display_fr": "Taxe mobile money (État)", "display_en": "Mobile money tax (state)", "bps": 50 },
+      { "kind": "platform_fee", "bearer": "seller", "display_fr": "Commission SunuMarket", "display_en": "SunuMarket fee", "bps": 200 }
+    ]
+  },
+  "kyc_tiers": {
+    "tier0": { "payout_daily_minor": "0", "cod_outstanding_minor": "0" },
+    "tier1": { "payout_daily_minor": "200000", "cod_outstanding_minor": "0" },
+    "tier2": { "payout_daily_minor": "2000000", "cod_outstanding_minor": "100000" }
+  },
+  "sms_sender_ids": ["SUNUMKT"],
+  "compliance_checklist": [
+    { "id": "dpa_registration", "label_fr": "Déclaration CDP (Commission de protection des Données Personnelles)", "authority": "CDP", "status": "todo" },
+    { "id": "tos_privacy_fr", "label_fr": "CGU et politique de confidentialité localisées (FR)", "authority": "interne", "status": "todo" },
+    { "id": "prohibited_items", "label_fr": "Liste des articles interdits (SN)", "authority": "interne", "status": "todo" },
+    { "id": "tax_disclosure", "label_fr": "Affichage transparent des frais/taxes avant paiement", "authority": "interne", "status": "todo" }
+  ],
+  "zones_ref": "zones/sn.geojson",
+  "market_data_date": "2026-08-20"
+}

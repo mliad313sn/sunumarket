@@ -1,0 +1,79 @@
+{
+ "type": "FeatureCollection",
+ "features": [
+  {
+   "type": "Feature",
+   "properties": {
+    "name": "Commune III",
+    "city": "Bamako",
+    "band": 1,
+    "fee_minor": "1000",
+    "currency": "XOF"
+   },
+   "geometry": {
+    "type": "Polygon",
+    "coordinates": [
+     [
+      [
+       -8.02,
+       12.63
+      ],
+      [
+       -7.97,
+       12.63
+      ],
+      [
+       -7.97,
+       12.67
+      ],
+      [
+       -8.02,
+       12.67
+      ],
+      [
+       -8.02,
+       12.63
+      ]
+     ]
+    ]
+   }
+  },
+  {
+   "type": "Feature",
+   "properties": {
+    "name": "Commune IV",
+    "city": "Bamako",
+    "band": 2,
+    "fee_minor": "1500",
+    "currency": "XOF"
+   },
+   "geometry": {
+    "type": "Polygon",
+    "coordinates": [
+     [
+      [
+       -8.06,
+       12.61
+      ],
+      [
+       -8.01,
+       12.61
+      ],
+      [
+       -8.01,
+       12.66
+      ],
+      [
+       -8.06,
+       12.66
+      ],
+      [
+       -8.06,
+       12.61
+      ]
+     ]
+    ]
+   }
+  }
+ ]
+}

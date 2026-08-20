@@ -1,0 +1,116 @@
+{
+ "type": "FeatureCollection",
+ "features": [
+  {
+   "type": "Feature",
+   "properties": {
+    "name": "Plateau-Cocody",
+    "city": "Abidjan",
+    "band": 1,
+    "fee_minor": "1000",
+    "currency": "XOF"
+   },
+   "geometry": {
+    "type": "Polygon",
+    "coordinates": [
+     [
+      [
+       -4.03,
+       5.31
+      ],
+      [
+       -3.97,
+       5.31
+      ],
+      [
+       -3.97,
+       5.359999999999999
+      ],
+      [
+       -4.03,
+       5.359999999999999
+      ],
+      [
+       -4.03,
+       5.31
+      ]
+     ]
+    ]
+   }
+  },
+  {
+   "type": "Feature",
+   "properties": {
+    "name": "Yopougon",
+    "city": "Abidjan",
+    "band": 2,
+    "fee_minor": "1500",
+    "currency": "XOF"
+   },
+   "geometry": {
+    "type": "Polygon",
+    "coordinates": [
+     [
+      [
+       -4.12,
+       5.31
+      ],
+      [
+       -4.04,
+       5.31
+      ],
+      [
+       -4.04,
+       5.369999999999999
+      ],
+      [
+       -4.12,
+       5.369999999999999
+      ],
+      [
+       -4.12,
+       5.31
+      ]
+     ]
+    ]
+   }
+  },
+  {
+   "type": "Feature",
+   "properties": {
+    "name": "Abobo-Adjamé",
+    "city": "Abidjan",
+    "band": 3,
+    "fee_minor": "2000",
+    "currency": "XOF"
+   },
+   "geometry": {
+    "type": "Polygon",
+    "coordinates": [
+     [
+      [
+       -4.05,
+       5.37
+      ],
+      [
+       -3.98,
+       5.37
+      ],
+      [
+       -3.98,
+       5.43
+      ],
+      [
+       -4.05,
+       5.43
+      ],
+      [
+       -4.05,
+       5.37
+      ]
+     ]
+    ]
+   }
+  }
+ ]
+}

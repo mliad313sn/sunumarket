@@ -1,0 +1,116 @@
+{
+ "type": "FeatureCollection",
+ "features": [
+  {
+   "type": "Feature",
+   "properties": {
+    "name": "Plateau-Médina",
+    "city": "Dakar",
+    "band": 1,
+    "fee_minor": "1000",
+    "currency": "XOF"
+   },
+   "geometry": {
+    "type": "Polygon",
+    "coordinates": [
+     [
+      [
+       -17.46,
+       14.66
+      ],
+      [
+       -17.42,
+       14.66
+      ],
+      [
+       -17.42,
+       14.7
+      ],
+      [
+       -17.46,
+       14.7
+      ],
+      [
+       -17.46,
+       14.66
+      ]
+     ]
+    ]
+   }
+  },
+  {
+   "type": "Feature",
+   "properties": {
+    "name": "Grand Dakar-Ouakam",
+    "city": "Dakar",
+    "band": 2,
+    "fee_minor": "1500",
+    "currency": "XOF"
+   },
+   "geometry": {
+    "type": "Polygon",
+    "coordinates": [
+     [
+      [
+       -17.5,
+       14.7
+      ],
+      [
+       -17.44,
+       14.7
+      ],
+      [
+       -17.44,
+       14.75
+      ],
+      [
+       -17.5,
+       14.75
+      ],
+      [
+       -17.5,
+       14.7
+      ]
+     ]
+    ]
+   }
+  },
+  {
+   "type": "Feature",
+   "properties": {
+    "name": "Pikine-Guédiawaye",
+    "city": "Dakar",
+    "band": 3,
+    "fee_minor": "2000",
+    "currency": "XOF"
+   },
+   "geometry": {
+    "type": "Polygon",
+    "coordinates": [
+     [
+      [
+       -17.42,
+       14.74
+      ],
+      [
+       -17.340000000000003,
+       14.74
+      ],
+      [
+       -17.340000000000003,
+       14.790000000000001
+      ],
+      [
+       -17.42,
+       14.790000000000001
+      ],
+      [
+       -17.42,
+       14.74
+      ]
+     ]
+    ]
+   }
+  }
+ ]
+}
