@@ -123,10 +123,12 @@ export function registerDeliveryRoutes(app: FastifyInstance, deps: AppDeps): voi
     })
   );
 
-  // Partner-scoped job list (dashboard data; isolation enforced by partner id claim).
-  app.get("/partner/jobs", { preHandler: requireRoles("partner") }, async (req) => {
-    const partner = await deps.prisma.partner.findFirstOrThrow();
-    void req;
+  // Partner-scoped job list — committee finding C: strictly the caller's partner.
+  app.get("/partner/jobs", { preHandler: requireRoles("partner") }, async (req, reply) => {
+    const partner = await deps.prisma.partner.findFirst({ where: { contactUserId: req.user.sub } });
+    if (!partner) {
+      return reply.code(403).send({ code: "no_partner", message: "aucun partenaire associé à ce compte" });
+    }
     const jobs = await deps.prisma.deliveryJob.findMany({
       where: { partnerId: partner.id },
       orderBy: { createdAt: "desc" },

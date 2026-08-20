@@ -5,6 +5,11 @@
 
 ## Recommendation: **CONDITIONAL GO** — beta-ready on mocks; production launch gated on the 5 external integrations listed under "Descoped".
 
+> **Addendum (same day):** the Goal §4 stakeholder committee re-convened for a full scope audit
+> and confirmed 6 gaps the phase reports had missed — two of them beta-blockers (COD sales never
+> credited the seller ledger; no worker ran the sweeps in production). **All six are remediated
+> and regression-tested** — see `docs/reports/COMMITTEE-REVIEW.md`. Suite now 189 tests.
+
 ---
 
 ## 1. Gates

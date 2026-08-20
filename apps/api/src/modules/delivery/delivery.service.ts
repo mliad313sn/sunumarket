@@ -5,6 +5,7 @@ import type { MessagingProvider } from "../../lib/messaging.js";
 import type { KycService } from "../kyc/kyc.service.js";
 import type { OrdersService } from "../orders/orders.service.js";
 import type { MockPiSpiProvider } from "../payments/mock-provider.js";
+import type { LedgerService } from "../ledger/ledger.service.js";
 import type { DeliveryPartnerAdapter } from "./partner-adapter.js";
 
 const BROADCAST_TIMEOUT_MS = 2 * 60 * 1000;
@@ -34,7 +35,8 @@ export class DeliveryService {
     private readonly kyc: KycService,
     private readonly piSpi: MockPiSpiProvider,
     private readonly messaging: MessagingProvider,
-    private readonly partnerAdapters: Map<string, DeliveryPartnerAdapter>
+    private readonly partnerAdapters: Map<string, DeliveryPartnerAdapter>,
+    private readonly ledger: LedgerService
   ) {}
 
   /** FR-26: request delivery for a paid order; SELF/RIDER/PARTNER (DC on mode). */
@@ -219,6 +221,16 @@ export class DeliveryService {
     await this.transition(jobId, "delivered");
     await this.orders.transition(job.orderId, "delivered");
 
+    // DC-15: buyer notification on delivery (SMS fallback path, outbox-persisted).
+    const notifyOrder = await this.prisma.order.findUniqueOrThrow({ where: { id: job.orderId } });
+    if (notifyOrder.guestPhone) {
+      await this.messaging.sendSms({
+        phone: notifyOrder.guestPhone,
+        senderId: "SUNUMKT",
+        body: "SunuMarket: commande livrée ✓ Merci ! Notez votre expérience via votre lien de suivi."
+      });
+    }
+
     if (job.cod && job.codAmountMinor && job.riderId) {
       await this.prisma.riderCashLedger.create({
         data: {
@@ -230,6 +242,25 @@ export class DeliveryService {
         }
       });
       await this.refreshCodCache(job.riderId);
+      // Committee finding A (FR-16/FR-19): the COD sale reaches the seller's
+      // payable ledger at delivery — platform fee only (no provider fee, no MM
+      // tax on a cash handover). Cash custody moves via the rider ledger.
+      const codOrder = await this.prisma.order.findUniqueOrThrow({
+        where: { id: job.orderId },
+        include: { shop: true, attempts: { where: { method: "COD", status: "succeeded" } } }
+      });
+      const codAttempt = codOrder.attempts[0];
+      if (codAttempt) {
+        await this.ledger.recordSale({
+          orderId: codOrder.id,
+          attemptId: codAttempt.id,
+          sellerId: codOrder.shop.sellerId,
+          country: codOrder.shop.country,
+          grossMinor: codOrder.totalMinor,
+          currency: codOrder.currency,
+          feeKinds: ["platform_fee"]
+        });
+      }
     }
     // Trust counter (DC-16)
     const order = await this.prisma.order.findUniqueOrThrow({ where: { id: job.orderId } });
@@ -298,17 +329,33 @@ export class DeliveryService {
     await this.prisma.rider.update({ where: { userId: riderId }, data: { codOutstandingMinor: outstanding } });
   }
 
-  /** Timeout re-broadcast: still-broadcasting jobs re-offer (escalation hook). */
+  /**
+   * Timeout re-broadcast with escalation (committee finding E): each sweep
+   * re-offers; from the second round the seller is notified so they can switch
+   * to PARTNER or SELF (partner-outage runbook path).
+   */
   async rebroadcastStale(now = new Date()): Promise<number> {
     const stale = await this.prisma.deliveryJob.findMany({
       where: {
         status: "broadcasting",
         updatedAt: { lt: new Date(now.getTime() - BROADCAST_TIMEOUT_MS) }
       },
-      include: { order: { include: { shop: true } } }
+      include: { order: { include: { shop: { include: { seller: true } } } } }
     });
     for (const job of stale) {
       await this.broadcast(job.id, job.order.shop.cityId);
+      const round =
+        (await this.prisma.jobEvent.count({ where: { jobId: job.id, status: "rebroadcast" } })) + 1;
+      await this.prisma.jobEvent.create({
+        data: { jobId: job.id, eventId: `rebroadcast-${round}-${now.getTime()}`, status: "rebroadcast", at: now }
+      });
+      if (round >= 2) {
+        await this.messaging.sendSms({
+          phone: job.order.shop.seller.phone,
+          senderId: "SUNUMKT",
+          body: "SunuMarket: aucun livreur n'a accepté votre course. Envisagez la livraison partenaire ou par vous-même depuis la commande."
+        });
+      }
       await this.prisma.deliveryJob.update({ where: { id: job.id }, data: { updatedAt: now } });
     }
     return stale.length;

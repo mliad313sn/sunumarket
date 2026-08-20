@@ -116,6 +116,43 @@ export function registerTrustRoutes(app: FastifyInstance, deps: AppDeps): void {
     return { ok: true };
   });
   app.get("/admin/audit", { preHandler: requireRoles("admin") }, async () => deps.admin.auditTrail());
+
+  // Goal §10 KPI: attempt success PER METHOD tracked separately + fallback share (finding F).
+  app.get("/admin/metrics/payments", { preHandler: requireRoles("admin") }, async () => {
+    const rows = await deps.prisma.paymentAttempt.groupBy({
+      by: ["method", "status"],
+      _count: { _all: true }
+    });
+    const byMethod = new Map<string, { succeeded: number; failed: number; other: number }>();
+    for (const r of rows) {
+      const m = byMethod.get(r.method) ?? { succeeded: 0, failed: 0, other: 0 };
+      if (r.status === "succeeded" || r.status === "succeeded_late") m.succeeded += r._count._all;
+      else if (r.status === "failed") m.failed += r._count._all;
+      else m.other += r._count._all;
+      byMethod.set(r.method, m);
+    }
+    const byProvider = await deps.prisma.paymentAttempt.groupBy({
+      by: ["providerId"],
+      where: { status: { in: ["succeeded", "succeeded_late"] } },
+      _count: { _all: true }
+    });
+    const providers = await deps.prisma.paymentProvider.findMany();
+    const providerName = new Map(providers.map((p) => [p.id, p.code]));
+    return {
+      per_method: [...byMethod.entries()].map(([method, c]) => ({
+        method,
+        succeeded: c.succeeded,
+        failed: c.failed,
+        other: c.other,
+        success_rate_pct:
+          c.succeeded + c.failed > 0 ? Math.round((c.succeeded / (c.succeeded + c.failed)) * 100) : null
+      })),
+      paid_per_provider: byProvider.map((r) => ({
+        provider: r.providerId ? (providerName.get(r.providerId) ?? "unknown") : "none",
+        paid: r._count._all
+      }))
+    };
+  });
   app.get("/admin/disputes", { preHandler: requireRoles("admin") }, async () =>
     deps.prisma.dispute.findMany({ where: { status: "open" }, include: { order: { select: { id: true, totalMinor: true, currency: true, shopId: true } } } })
   );

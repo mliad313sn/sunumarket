@@ -84,14 +84,16 @@ async function main() {
     create: { userId: moussa.id, vehicle: "moto", active: true }
   });
 
+  const partnerOps = await upsertUser("+221771234508", "DiaLog Ops", "SN", ["partner"], 1);
   await prisma.partner.upsert({
     where: { id: "00000000-0000-4000-8000-000000000001" },
-    update: {},
+    update: { contactUserId: partnerOps.id },
     create: {
       id: "00000000-0000-4000-8000-000000000001",
       name: "DiaLog Express",
       adapter: "MOCK",
-      webhookSecretRef: "PARTNER_DIALOG_WEBHOOK_SECRET"
+      webhookSecretRef: "PARTNER_DIALOG_WEBHOOK_SECRET",
+      contactUserId: partnerOps.id
     }
   });
 

@@ -1,7 +1,7 @@
 import type { PrismaClient } from "@prisma/client";
 import { PackRegistry } from "@sunumarket/config";
 import { getPrisma } from "./lib/prisma.js";
-import { MockMessagingProvider, type MessagingProvider } from "./lib/messaging.js";
+import { MockMessagingProvider, OutboxMessagingProvider, type MessagingProvider } from "./lib/messaging.js";
 import { AuthService } from "./modules/auth/auth.service.js";
 import { FraudService } from "./modules/fraud/fraud.service.js";
 import { MemoryCounterStore, VelocityRules } from "./modules/fraud/velocity.js";
@@ -48,7 +48,8 @@ export interface AppDeps {
 export function buildDeps(overrides: Partial<AppDeps> = {}): AppDeps {
   const prisma = overrides.prisma ?? getPrisma();
   const packs = overrides.packs ?? new PackRegistry();
-  const messaging = overrides.messaging ?? new MockMessagingProvider();
+  // DC-15: notifications persist to sms_outbox before hitting the gateway.
+  const messaging = overrides.messaging ?? new OutboxMessagingProvider(prisma, new MockMessagingProvider());
   const velocity = overrides.velocity ?? new VelocityRules(new MemoryCounterStore());
   const fraud = overrides.fraud ?? new FraudService(prisma);
   const auth = overrides.auth ?? new AuthService(prisma, messaging, packs, velocity, fraud);
@@ -68,7 +69,7 @@ export function buildDeps(overrides: Partial<AppDeps> = {}): AppDeps {
   const mockPartner = overrides.mockPartner ?? new MockPartnerAdapter("MOCK", process.env.PARTNER_DIALOG_WEBHOOK_SECRET ?? "partner-secret");
   const partnerAdapters = new Map<string, DeliveryPartnerAdapter>([["MOCK", mockPartner]]);
   const delivery =
-    overrides.delivery ?? new DeliveryService(prisma, orders, kyc, mockPiSpi, messaging, partnerAdapters);
+    overrides.delivery ?? new DeliveryService(prisma, orders, kyc, mockPiSpi, messaging, partnerAdapters, ledger);
   const trust = overrides.trust ?? new TrustService(prisma);
   const admin = overrides.admin ?? new AdminService(prisma, packs);
   payouts.setFrozenProvider((sellerId) => trust.frozenAmountFor(sellerId));

@@ -104,9 +104,13 @@ export class LedgerService {
     grossMinor: bigint;
     currency: string;
     direct?: boolean;
+    /** Restrict which pass-through kinds apply (e.g. COD: platform_fee only — no
+     * provider fee and no MM transaction tax on a cash handover). */
+    feeKinds?: ReadonlyArray<"provider_fee" | "platform_fee" | "mm_transaction_tax">;
   }): Promise<{ transactionId: string; netMinor: bigint }> {
     const gross = money(input.grossMinor, input.currency as never);
-    const pass = input.direct ? [] : this.packs.get(input.country).fees_taxes.pass_through;
+    let pass = input.direct ? [] : this.packs.get(input.country).fees_taxes.pass_through;
+    if (input.feeKinds) pass = pass.filter((f) => (input.feeKinds as readonly string[]).includes(f.kind));
     let providerFee = 0n;
     let platformFee = 0n;
     let tax = 0n;

@@ -162,6 +162,17 @@ export class OrdersService {
     }
   }
 
+  /** Worker sweep: delivered orders auto-complete after the review window (FR-36). */
+  async autoCompleteDelivered(now = new Date(), windowDays = 3): Promise<number> {
+    const cutoff = new Date(now.getTime() - windowDays * 24 * 60 * 60 * 1000);
+    const due = await this.prisma.order.findMany({
+      where: { status: "delivered", updatedAt: { lt: cutoff } },
+      select: { id: true }
+    });
+    for (const o of due) await this.transition(o.id, "completed");
+    return due.length;
+  }
+
   /** Expiry sweep (worker): payment_pending past the hold → expired + restock. */
   async expireOverdueOrders(now = new Date()): Promise<number> {
     const overdue = await this.prisma.order.findMany({

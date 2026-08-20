@@ -48,7 +48,15 @@ d("phase 4 — shops & products", () => {
   });
 
   it("seller subset must stay inside the country matrix (FR-13)", async () => {
-    const shop = await app.deps.prisma.shop.findFirstOrThrow({ where: { sellerId, country: "SN" } });
+    // dedicated shop — must NOT mutate seed shops other suites depend on
+    const city = await app.deps.prisma.city.findFirstOrThrow({ where: { country: "SN" } });
+    const created = await app.inject({
+      method: "POST",
+      url: "/shops",
+      headers: { authorization: `Bearer ${sellerToken}` },
+      payload: { name: `Subset Test ${Date.now()}`, country: "SN", city_id: city.id }
+    });
+    const shop = created.json() as { id: string };
     const bad = await app.inject({
       method: "POST",
       url: `/shops/${shop.id}/methods`,

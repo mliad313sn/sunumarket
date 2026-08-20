@@ -3,7 +3,7 @@
 > Updated every working session per Playbook rule 0.2. This file is the recovery point.
 
 - **Current phase:** PROGRAMME COMPLETE (all 13 phase exits met or explicitly descoped)
-- **Checkpoint:** Phase 12 closed (gate-12). Clean-room drill: fresh DB → migrate → seed → 181 tests green → invariants 8/8. 10/10 golden paths + Mali drill in consolidated E2E. Compliance sn/ci/bf, 8 runbooks, 4 guides, beta plan, k6 script, security pass (audit clean), READY_TO_MARKET_REPORT (conditional GO).
+- **Checkpoint:** Committee scope review completed and remediated (see docs/reports/COMMITTEE-REVIEW.md): COD seller-ledger credit, SMS outbox + delivered SMS + retry sweep, partner isolation (migration partner_contact_user), worker entrypoint + auto-complete, dispatch escalation, per-method KPI metrics. 189 tests green; invariants 8/8; clean-room verified.
 - **Exact next action:** (next session) real provider adapters vs sandboxes per contract-test protocol; Expo mobile app; staging deploy + soak (k6/ZAP/chaos/restore). See READY_TO_MARKET_REPORT §4 and BACKLOG.
 - **Branch:** `claude/execute-zip-instructions-2qmy1f`
 
@@ -22,3 +22,4 @@
 - 2026-08-20 gate-10 PASSED: trust/admin suite 8/8; config-change tests prove no-deploy flips; support scenario incl. reconciliation-flag resolution end-to-end.
 - 2026-08-20 gate-11 PASSED: i18n FR/EN parity test, USSD countdown pure tests, offline queue exactly-once flush tests, funnel event set incl. ussd_abandoned; all 3 bundles ≤53KB gzip.
 - 2026-08-20 gate-12 PASSED (with recorded descopes): consolidated E2E 13/13; expansion drill NFR-8 proven; pnpm audit 0 vulns; invariants clean on fresh DB; RTM report delivered with conditional GO.
+- 2026-08-20 COMMITTEE REVIEW: 6 findings (2 critical) found and fixed with 8-test regression suite; catalog test flake (seed-shop mutation) fixed; RTM addendum recorded.
