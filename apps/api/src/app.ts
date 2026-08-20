@@ -3,6 +3,9 @@ import cors from "@fastify/cors";
 import jwt from "@fastify/jwt";
 import { buildDeps, type AppDeps } from "./deps.js";
 import { registerAuthRoutes } from "./modules/auth/auth.routes.js";
+import { registerCatalogRoutes } from "./modules/catalog/catalog.routes.js";
+import { registerGeoRoutes } from "./modules/geo/geo.routes.js";
+import { registerOrderRoutes } from "./modules/orders/orders.routes.js";
 
 export async function buildApp(depOverrides: Partial<AppDeps> = {}) {
   const app = Fastify({ logger: process.env.NODE_ENV !== "test" && !process.env.VITEST });
@@ -19,6 +22,9 @@ export async function buildApp(depOverrides: Partial<AppDeps> = {}) {
   }));
 
   registerAuthRoutes(app, deps);
+  registerCatalogRoutes(app, deps);
+  registerGeoRoutes(app, deps);
+  registerOrderRoutes(app, deps);
 
   return app;
 }

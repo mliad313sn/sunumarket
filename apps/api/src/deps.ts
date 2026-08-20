@@ -6,6 +6,9 @@ import { AuthService } from "./modules/auth/auth.service.js";
 import { FraudService } from "./modules/fraud/fraud.service.js";
 import { MemoryCounterStore, VelocityRules } from "./modules/fraud/velocity.js";
 import { KycService } from "./modules/kyc/kyc.service.js";
+import { CatalogService } from "./modules/catalog/catalog.service.js";
+import { GeoApiService } from "./modules/geo/geo.service.js";
+import { OrdersService } from "./modules/orders/orders.service.js";
 
 export interface AppDeps {
   prisma: PrismaClient;
@@ -15,6 +18,9 @@ export interface AppDeps {
   fraud: FraudService;
   auth: AuthService;
   kyc: KycService;
+  catalog: CatalogService;
+  geo: GeoApiService;
+  orders: OrdersService;
 }
 
 export function buildDeps(overrides: Partial<AppDeps> = {}): AppDeps {
@@ -25,5 +31,8 @@ export function buildDeps(overrides: Partial<AppDeps> = {}): AppDeps {
   const fraud = overrides.fraud ?? new FraudService(prisma);
   const auth = overrides.auth ?? new AuthService(prisma, messaging, packs, velocity, fraud);
   const kyc = overrides.kyc ?? new KycService(prisma, packs);
-  return { prisma, packs, messaging, velocity, fraud, auth, kyc };
+  const catalog = overrides.catalog ?? new CatalogService(prisma, packs);
+  const geo = overrides.geo ?? new GeoApiService(prisma);
+  const orders = overrides.orders ?? new OrdersService(prisma, geo);
+  return { prisma, packs, messaging, velocity, fraud, auth, kyc, catalog, geo, orders };
 }
