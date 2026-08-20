@@ -1,0 +1,3907 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "SunuMarket API",
+    "version": "1.0.0",
+    "description": "Contract-first API generated from packages/shared Zod schemas (Phase 1). Money is always {amount_minor, currency} — DC-5."
+  },
+  "servers": [
+    {
+      "url": "/v1"
+    }
+  ],
+  "components": {
+    "schemas": {
+      "ApiError": {
+        "type": "object",
+        "properties": {
+          "code": {
+            "type": "string"
+          },
+          "message": {
+            "type": "string"
+          },
+          "details": {
+            "type": "object",
+            "additionalProperties": {}
+          }
+        },
+        "required": [
+          "code",
+          "message"
+        ]
+      }
+    },
+    "parameters": {}
+  },
+  "paths": {
+    "/auth/otp": {
+      "post": {
+        "operationId": "requestOtp",
+        "tags": [
+          "auth"
+        ],
+        "summary": "Request login OTP (SMS)",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "phone": {
+                    "type": "string",
+                    "pattern": "^\\+\\d{8,15}$"
+                  },
+                  "country": {
+                    "type": "string",
+                    "enum": [
+                      "SN",
+                      "CI",
+                      "BF",
+                      "ML",
+                      "TG",
+                      "BJ",
+                      "NE"
+                    ]
+                  },
+                  "device_hash": {
+                    "type": "string",
+                    "minLength": 8,
+                    "maxLength": 128
+                  }
+                },
+                "required": [
+                  "phone",
+                  "country",
+                  "device_hash"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "sent": {
+                      "type": "boolean"
+                    }
+                  },
+                  "required": [
+                    "sent"
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/auth/verify": {
+      "post": {
+        "operationId": "verifyOtp",
+        "tags": [
+          "auth"
+        ],
+        "summary": "Verify OTP, issue token pair; flags new-device re-verify (DC-8.3)",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "phone": {
+                    "type": "string",
+                    "pattern": "^\\+\\d{8,15}$"
+                  },
+                  "code": {
+                    "type": "string",
+                    "pattern": "^\\d{6}$"
+                  },
+                  "device_hash": {
+                    "type": "string",
+                    "minLength": 8,
+                    "maxLength": 128
+                  }
+                },
+                "required": [
+                  "phone",
+                  "code",
+                  "device_hash"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "access_token": {
+                      "type": "string"
+                    },
+                    "refresh_token": {
+                      "type": "string"
+                    },
+                    "reverify_required": {
+                      "type": "boolean",
+                      "default": false
+                    }
+                  },
+                  "required": [
+                    "access_token",
+                    "refresh_token"
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/auth/refresh": {
+      "post": {
+        "operationId": "refreshToken",
+        "tags": [
+          "auth"
+        ],
+        "summary": "Rotate refresh token",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "refresh_token": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "refresh_token"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "access_token": {
+                      "type": "string"
+                    },
+                    "refresh_token": {
+                      "type": "string"
+                    },
+                    "reverify_required": {
+                      "type": "boolean",
+                      "default": false
+                    }
+                  },
+                  "required": [
+                    "access_token",
+                    "refresh_token"
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/me": {
+      "get": {
+        "operationId": "getMe",
+        "tags": [
+          "auth"
+        ],
+        "summary": "Current user",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "type": "string",
+                      "format": "uuid"
+                    },
+                    "phone": {
+                      "type": "string",
+                      "pattern": "^\\+\\d{8,15}$"
+                    },
+                    "name": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "roles": {
+                      "type": "array",
+                      "items": {
+                        "type": "string",
+                        "enum": [
+                          "buyer",
+                          "seller",
+                          "rider",
+                          "partner",
+                          "admin"
+                        ]
+                      }
+                    },
+                    "country": {
+                      "type": "string",
+                      "enum": [
+                        "SN",
+                        "CI",
+                        "BF",
+                        "ML",
+                        "TG",
+                        "BJ",
+                        "NE"
+                      ]
+                    },
+                    "locale": {
+                      "type": "string",
+                      "enum": [
+                        "fr",
+                        "en"
+                      ]
+                    },
+                    "kyc_tier": {
+                      "anyOf": [
+                        {
+                          "type": "number",
+                          "enum": [
+                            0
+                          ]
+                        },
+                        {
+                          "type": "number",
+                          "enum": [
+                            1
+                          ]
+                        },
+                        {
+                          "type": "number",
+                          "enum": [
+                            2
+                          ]
+                        }
+                      ]
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "phone",
+                    "name",
+                    "roles",
+                    "country",
+                    "locale",
+                    "kyc_tier"
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/kyc/upgrade": {
+      "post": {
+        "operationId": "requestKycUpgrade",
+        "tags": [
+          "auth"
+        ],
+        "summary": "Request KYC tier upgrade (DC-13)",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "target_tier": {
+                    "anyOf": [
+                      {
+                        "type": "number",
+                        "enum": [
+                          1
+                        ]
+                      },
+                      {
+                        "type": "number",
+                        "enum": [
+                          2
+                        ]
+                      }
+                    ]
+                  },
+                  "id_document_key": {
+                    "type": "string"
+                  },
+                  "address": {
+                    "type": "string"
+                  },
+                  "vehicle": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "target_tier",
+                  "id_document_key"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "status"
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/shops": {
+      "post": {
+        "operationId": "createShop",
+        "tags": [
+          "catalog"
+        ],
+        "summary": "Create shop (wizard ≤5 steps)",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "name": {
+                    "type": "string",
+                    "minLength": 2,
+                    "maxLength": 80
+                  },
+                  "country": {
+                    "type": "string",
+                    "enum": [
+                      "SN",
+                      "CI",
+                      "BF",
+                      "ML",
+                      "TG",
+                      "BJ",
+                      "NE"
+                    ]
+                  },
+                  "city_id": {
+                    "type": "string",
+                    "format": "uuid"
+                  },
+                  "description": {
+                    "type": "string",
+                    "maxLength": 500
+                  },
+                  "whatsapp_phone": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "name",
+                  "country",
+                  "city_id"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "name": {
+                      "type": "string",
+                      "minLength": 2,
+                      "maxLength": 80
+                    },
+                    "country": {
+                      "type": "string",
+                      "enum": [
+                        "SN",
+                        "CI",
+                        "BF",
+                        "ML",
+                        "TG",
+                        "BJ",
+                        "NE"
+                      ]
+                    },
+                    "city_id": {
+                      "type": "string",
+                      "format": "uuid"
+                    },
+                    "description": {
+                      "type": "string",
+                      "maxLength": 500
+                    },
+                    "whatsapp_phone": {
+                      "type": "string"
+                    },
+                    "id": {
+                      "type": "string",
+                      "format": "uuid"
+                    },
+                    "slug": {
+                      "type": "string"
+                    },
+                    "seller_id": {
+                      "type": "string",
+                      "format": "uuid"
+                    },
+                    "verified": {
+                      "type": "boolean"
+                    },
+                    "completed_orders": {
+                      "type": "integer"
+                    },
+                    "enabled_methods": {
+                      "type": "array",
+                      "items": {
+                        "type": "string",
+                        "enum": [
+                          "WAVE",
+                          "ORANGE_MONEY",
+                          "MTN_MOMO",
+                          "MOOV_MONEY",
+                          "MIXX_BY_YAS",
+                          "PI_SPI",
+                          "CARD",
+                          "COD",
+                          "MANUAL_TRANSFER",
+                          "MPESA",
+                          "BANK_TRANSFER_INSTANT",
+                          "AIRTEL_MONEY"
+                        ]
+                      }
+                    }
+                  },
+                  "required": [
+                    "name",
+                    "country",
+                    "city_id",
+                    "id",
+                    "slug",
+                    "seller_id",
+                    "verified",
+                    "completed_orders",
+                    "enabled_methods"
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/shops/{slug}": {
+      "get": {
+        "operationId": "getShop",
+        "tags": [
+          "catalog"
+        ],
+        "summary": "Public shop page",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "name": {
+                      "type": "string",
+                      "minLength": 2,
+                      "maxLength": 80
+                    },
+                    "country": {
+                      "type": "string",
+                      "enum": [
+                        "SN",
+                        "CI",
+                        "BF",
+                        "ML",
+                        "TG",
+                        "BJ",
+                        "NE"
+                      ]
+                    },
+                    "city_id": {
+                      "type": "string",
+                      "format": "uuid"
+                    },
+                    "description": {
+                      "type": "string",
+                      "maxLength": 500
+                    },
+                    "whatsapp_phone": {
+                      "type": "string"
+                    },
+                    "id": {
+                      "type": "string",
+                      "format": "uuid"
+                    },
+                    "slug": {
+                      "type": "string"
+                    },
+                    "seller_id": {
+                      "type": "string",
+                      "format": "uuid"
+                    },
+                    "verified": {
+                      "type": "boolean"
+                    },
+                    "completed_orders": {
+                      "type": "integer"
+                    },
+                    "enabled_methods": {
+                      "type": "array",
+                      "items": {
+                        "type": "string",
+                        "enum": [
+                          "WAVE",
+                          "ORANGE_MONEY",
+                          "MTN_MOMO",
+                          "MOOV_MONEY",
+                          "MIXX_BY_YAS",
+                          "PI_SPI",
+                          "CARD",
+                          "COD",
+                          "MANUAL_TRANSFER",
+                          "MPESA",
+                          "BANK_TRANSFER_INSTANT",
+                          "AIRTEL_MONEY"
+                        ]
+                      }
+                    }
+                  },
+                  "required": [
+                    "name",
+                    "country",
+                    "city_id",
+                    "id",
+                    "slug",
+                    "seller_id",
+                    "verified",
+                    "completed_orders",
+                    "enabled_methods"
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/shops/{id}/products": {
+      "post": {
+        "operationId": "createProduct",
+        "tags": [
+          "catalog"
+        ],
+        "summary": "Create product (≤60 s from photos)",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "title": {
+                    "type": "string",
+                    "minLength": 2,
+                    "maxLength": 120
+                  },
+                  "description": {
+                    "type": "string",
+                    "maxLength": 2000
+                  },
+                  "price": {
+                    "type": "object",
+                    "properties": {
+                      "amount_minor": {
+                        "type": "string",
+                        "pattern": "^-?\\d+$"
+                      },
+                      "currency": {
+                        "type": "string",
+                        "enum": [
+                          "XOF",
+                          "GHS",
+                          "NGN",
+                          "KES"
+                        ]
+                      }
+                    },
+                    "required": [
+                      "amount_minor",
+                      "currency"
+                    ]
+                  },
+                  "stock": {
+                    "type": "integer",
+                    "minimum": 0
+                  },
+                  "image_keys": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    },
+                    "maxItems": 6
+                  }
+                },
+                "required": [
+                  "title",
+                  "price",
+                  "stock",
+                  "image_keys"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "title": {
+                      "type": "string",
+                      "minLength": 2,
+                      "maxLength": 120
+                    },
+                    "description": {
+                      "type": "string",
+                      "maxLength": 2000
+                    },
+                    "price": {
+                      "type": "object",
+                      "properties": {
+                        "amount_minor": {
+                          "type": "string",
+                          "pattern": "^-?\\d+$"
+                        },
+                        "currency": {
+                          "type": "string",
+                          "enum": [
+                            "XOF",
+                            "GHS",
+                            "NGN",
+                            "KES"
+                          ]
+                        }
+                      },
+                      "required": [
+                        "amount_minor",
+                        "currency"
+                      ]
+                    },
+                    "stock": {
+                      "type": "integer",
+                      "minimum": 0
+                    },
+                    "image_keys": {
+                      "type": "array",
+                      "items": {
+                        "type": "string"
+                      },
+                      "maxItems": 6
+                    },
+                    "id": {
+                      "type": "string",
+                      "format": "uuid"
+                    },
+                    "shop_id": {
+                      "type": "string",
+                      "format": "uuid"
+                    },
+                    "status": {
+                      "type": "string",
+                      "enum": [
+                        "draft",
+                        "active",
+                        "archived"
+                      ]
+                    },
+                    "created_at": {
+                      "type": "string",
+                      "format": "date-time"
+                    }
+                  },
+                  "required": [
+                    "title",
+                    "price",
+                    "stock",
+                    "image_keys",
+                    "id",
+                    "shop_id",
+                    "status",
+                    "created_at"
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/marketplace": {
+      "get": {
+        "operationId": "browseMarketplace",
+        "tags": [
+          "catalog"
+        ],
+        "summary": "Browse marketplace",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string"
+            },
+            "required": false,
+            "name": "cursor",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100,
+              "default": 20
+            },
+            "required": false,
+            "name": "limit",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "enum": [
+                "SN",
+                "CI",
+                "BF",
+                "ML",
+                "TG",
+                "BJ",
+                "NE"
+              ]
+            },
+            "required": false,
+            "name": "country",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": false,
+            "name": "city_id",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "maxLength": 100
+            },
+            "required": false,
+            "name": "q",
+            "in": "query"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "items": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "title": {
+                            "type": "string",
+                            "minLength": 2,
+                            "maxLength": 120
+                          },
+                          "description": {
+                            "type": "string",
+                            "maxLength": 2000
+                          },
+                          "price": {
+                            "type": "object",
+                            "properties": {
+                              "amount_minor": {
+                                "type": "string",
+                                "pattern": "^-?\\d+$"
+                              },
+                              "currency": {
+                                "type": "string",
+                                "enum": [
+                                  "XOF",
+                                  "GHS",
+                                  "NGN",
+                                  "KES"
+                                ]
+                              }
+                            },
+                            "required": [
+                              "amount_minor",
+                              "currency"
+                            ]
+                          },
+                          "stock": {
+                            "type": "integer",
+                            "minimum": 0
+                          },
+                          "image_keys": {
+                            "type": "array",
+                            "items": {
+                              "type": "string"
+                            },
+                            "maxItems": 6
+                          },
+                          "id": {
+                            "type": "string",
+                            "format": "uuid"
+                          },
+                          "shop_id": {
+                            "type": "string",
+                            "format": "uuid"
+                          },
+                          "status": {
+                            "type": "string",
+                            "enum": [
+                              "draft",
+                              "active",
+                              "archived"
+                            ]
+                          },
+                          "created_at": {
+                            "type": "string",
+                            "format": "date-time"
+                          }
+                        },
+                        "required": [
+                          "title",
+                          "price",
+                          "stock",
+                          "image_keys",
+                          "id",
+                          "shop_id",
+                          "status",
+                          "created_at"
+                        ]
+                      }
+                    },
+                    "next_cursor": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "items",
+                    "next_cursor"
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/delivery-points": {
+      "post": {
+        "operationId": "createDeliveryPoint",
+        "tags": [
+          "geo"
+        ],
+        "summary": "Save GPS pin + landmark (consent-gated, FR-21/25)",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "pin": {
+                    "type": "object",
+                    "properties": {
+                      "lat": {
+                        "type": "number",
+                        "minimum": -90,
+                        "maximum": 90
+                      },
+                      "lng": {
+                        "type": "number",
+                        "minimum": -180,
+                        "maximum": 180
+                      },
+                      "accuracy_m": {
+                        "type": "number",
+                        "minimum": 0
+                      },
+                      "landmark": {
+                        "type": "string",
+                        "minLength": 3,
+                        "maxLength": 200
+                      }
+                    },
+                    "required": [
+                      "lat",
+                      "lng",
+                      "landmark"
+                    ]
+                  },
+                  "label": {
+                    "type": "string",
+                    "maxLength": 60
+                  },
+                  "consent": {
+                    "type": "boolean",
+                    "enum": [
+                      true
+                    ]
+                  }
+                },
+                "required": [
+                  "pin",
+                  "consent"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "type": "string",
+                      "format": "uuid"
+                    },
+                    "pin": {
+                      "type": "object",
+                      "properties": {
+                        "lat": {
+                          "type": "number",
+                          "minimum": -90,
+                          "maximum": 90
+                        },
+                        "lng": {
+                          "type": "number",
+                          "minimum": -180,
+                          "maximum": 180
+                        },
+                        "accuracy_m": {
+                          "type": "number",
+                          "minimum": 0
+                        },
+                        "landmark": {
+                          "type": "string",
+                          "minLength": 3,
+                          "maxLength": 200
+                        }
+                      },
+                      "required": [
+                        "lat",
+                        "lng",
+                        "landmark"
+                      ]
+                    },
+                    "label": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "created_at": {
+                      "type": "string",
+                      "format": "date-time"
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "pin",
+                    "label",
+                    "created_at"
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/fees/quote": {
+      "post": {
+        "operationId": "quoteDeliveryFee",
+        "tags": [
+          "geo"
+        ],
+        "summary": "Zone/radius fee resolution pre-payment (FR-24)",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "shop_id": {
+                    "type": "string",
+                    "format": "uuid"
+                  },
+                  "pin": {
+                    "type": "object",
+                    "properties": {
+                      "lat": {
+                        "type": "number",
+                        "minimum": -90,
+                        "maximum": 90
+                      },
+                      "lng": {
+                        "type": "number",
+                        "minimum": -180,
+                        "maximum": 180
+                      }
+                    },
+                    "required": [
+                      "lat",
+                      "lng"
+                    ]
+                  }
+                },
+                "required": [
+                  "shop_id",
+                  "pin"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "fee": {
+                      "type": [
+                        "object",
+                        "null"
+                      ],
+                      "properties": {
+                        "amount_minor": {
+                          "type": "string",
+                          "pattern": "^-?\\d+$"
+                        },
+                        "currency": {
+                          "type": "string",
+                          "enum": [
+                            "XOF",
+                            "GHS",
+                            "NGN",
+                            "KES"
+                          ]
+                        }
+                      },
+                      "required": [
+                        "amount_minor",
+                        "currency"
+                      ]
+                    },
+                    "zone_name": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "resolution": {
+                      "type": "string",
+                      "enum": [
+                        "zone_polygon",
+                        "radius_band",
+                        "out_of_zone"
+                      ]
+                    },
+                    "deliverable": {
+                      "type": "boolean"
+                    }
+                  },
+                  "required": [
+                    "fee",
+                    "zone_name",
+                    "resolution",
+                    "deliverable"
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/orders": {
+      "post": {
+        "operationId": "createOrder",
+        "tags": [
+          "orders"
+        ],
+        "summary": "Create order (guest or account; idempotent)",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "shop_id": {
+                    "type": "string",
+                    "format": "uuid"
+                  },
+                  "items": {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "product_id": {
+                          "type": "string",
+                          "format": "uuid"
+                        },
+                        "qty": {
+                          "type": "integer",
+                          "minimum": 1,
+                          "maximum": 99
+                        }
+                      },
+                      "required": [
+                        "product_id",
+                        "qty"
+                      ]
+                    },
+                    "minItems": 1
+                  },
+                  "delivery_point": {
+                    "anyOf": [
+                      {
+                        "type": "object",
+                        "properties": {
+                          "saved_point_id": {
+                            "type": "string",
+                            "format": "uuid"
+                          }
+                        },
+                        "required": [
+                          "saved_point_id"
+                        ]
+                      },
+                      {
+                        "type": "object",
+                        "properties": {
+                          "pin": {
+                            "type": "object",
+                            "properties": {
+                              "lat": {
+                                "type": "number",
+                                "minimum": -90,
+                                "maximum": 90
+                              },
+                              "lng": {
+                                "type": "number",
+                                "minimum": -180,
+                                "maximum": 180
+                              },
+                              "accuracy_m": {
+                                "type": "number",
+                                "minimum": 0
+                              },
+                              "landmark": {
+                                "type": "string",
+                                "minLength": 3,
+                                "maxLength": 200
+                              }
+                            },
+                            "required": [
+                              "lat",
+                              "lng",
+                              "landmark"
+                            ]
+                          },
+                          "save_as": {
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "pin"
+                        ]
+                      }
+                    ]
+                  },
+                  "guest_phone": {
+                    "type": "string",
+                    "pattern": "^\\+\\d{8,15}$"
+                  },
+                  "idempotency_key": {
+                    "type": "string",
+                    "minLength": 8,
+                    "maxLength": 128
+                  }
+                },
+                "required": [
+                  "shop_id",
+                  "items",
+                  "delivery_point",
+                  "idempotency_key"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "type": "string",
+                      "format": "uuid"
+                    },
+                    "shop_id": {
+                      "type": "string",
+                      "format": "uuid"
+                    },
+                    "status": {
+                      "type": "string",
+                      "enum": [
+                        "created",
+                        "payment_pending",
+                        "payment_review",
+                        "paid",
+                        "preparing",
+                        "in_delivery",
+                        "delivery_issue",
+                        "delivered",
+                        "completed",
+                        "cancelled",
+                        "expired",
+                        "refunded"
+                      ]
+                    },
+                    "items": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "product_id": {
+                            "type": "string",
+                            "format": "uuid"
+                          },
+                          "title": {
+                            "type": "string"
+                          },
+                          "qty": {
+                            "type": "integer"
+                          },
+                          "unit_price": {
+                            "type": "object",
+                            "properties": {
+                              "amount_minor": {
+                                "type": "string",
+                                "pattern": "^-?\\d+$"
+                              },
+                              "currency": {
+                                "type": "string",
+                                "enum": [
+                                  "XOF",
+                                  "GHS",
+                                  "NGN",
+                                  "KES"
+                                ]
+                              }
+                            },
+                            "required": [
+                              "amount_minor",
+                              "currency"
+                            ]
+                          }
+                        },
+                        "required": [
+                          "product_id",
+                          "title",
+                          "qty",
+                          "unit_price"
+                        ]
+                      }
+                    },
+                    "subtotal": {
+                      "type": "object",
+                      "properties": {
+                        "amount_minor": {
+                          "type": "string",
+                          "pattern": "^-?\\d+$"
+                        },
+                        "currency": {
+                          "type": "string",
+                          "enum": [
+                            "XOF",
+                            "GHS",
+                            "NGN",
+                            "KES"
+                          ]
+                        }
+                      },
+                      "required": [
+                        "amount_minor",
+                        "currency"
+                      ]
+                    },
+                    "delivery_fee": {
+                      "type": "object",
+                      "properties": {
+                        "amount_minor": {
+                          "type": "string",
+                          "pattern": "^-?\\d+$"
+                        },
+                        "currency": {
+                          "type": "string",
+                          "enum": [
+                            "XOF",
+                            "GHS",
+                            "NGN",
+                            "KES"
+                          ]
+                        }
+                      },
+                      "required": [
+                        "amount_minor",
+                        "currency"
+                      ]
+                    },
+                    "total": {
+                      "type": "object",
+                      "properties": {
+                        "amount_minor": {
+                          "type": "string",
+                          "pattern": "^-?\\d+$"
+                        },
+                        "currency": {
+                          "type": "string",
+                          "enum": [
+                            "XOF",
+                            "GHS",
+                            "NGN",
+                            "KES"
+                          ]
+                        }
+                      },
+                      "required": [
+                        "amount_minor",
+                        "currency"
+                      ]
+                    },
+                    "delivery_point": {
+                      "type": "object",
+                      "properties": {
+                        "lat": {
+                          "type": "number",
+                          "minimum": -90,
+                          "maximum": 90
+                        },
+                        "lng": {
+                          "type": "number",
+                          "minimum": -180,
+                          "maximum": 180
+                        },
+                        "accuracy_m": {
+                          "type": "number",
+                          "minimum": 0
+                        },
+                        "landmark": {
+                          "type": "string",
+                          "minLength": 3,
+                          "maxLength": 200
+                        }
+                      },
+                      "required": [
+                        "lat",
+                        "lng",
+                        "landmark"
+                      ]
+                    },
+                    "tracking_token": {
+                      "type": "string"
+                    },
+                    "payment_expires_at": {
+                      "type": [
+                        "string",
+                        "null"
+                      ],
+                      "format": "date-time"
+                    },
+                    "created_at": {
+                      "type": "string",
+                      "format": "date-time"
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "shop_id",
+                    "status",
+                    "items",
+                    "subtotal",
+                    "delivery_fee",
+                    "total",
+                    "delivery_point",
+                    "tracking_token",
+                    "payment_expires_at",
+                    "created_at"
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/orders/{id}": {
+      "get": {
+        "operationId": "getOrder",
+        "tags": [
+          "orders"
+        ],
+        "summary": "Order detail",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "type": "string",
+                      "format": "uuid"
+                    },
+                    "shop_id": {
+                      "type": "string",
+                      "format": "uuid"
+                    },
+                    "status": {
+                      "type": "string",
+                      "enum": [
+                        "created",
+                        "payment_pending",
+                        "payment_review",
+                        "paid",
+                        "preparing",
+                        "in_delivery",
+                        "delivery_issue",
+                        "delivered",
+                        "completed",
+                        "cancelled",
+                        "expired",
+                        "refunded"
+                      ]
+                    },
+                    "items": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "product_id": {
+                            "type": "string",
+                            "format": "uuid"
+                          },
+                          "title": {
+                            "type": "string"
+                          },
+                          "qty": {
+                            "type": "integer"
+                          },
+                          "unit_price": {
+                            "type": "object",
+                            "properties": {
+                              "amount_minor": {
+                                "type": "string",
+                                "pattern": "^-?\\d+$"
+                              },
+                              "currency": {
+                                "type": "string",
+                                "enum": [
+                                  "XOF",
+                                  "GHS",
+                                  "NGN",
+                                  "KES"
+                                ]
+                              }
+                            },
+                            "required": [
+                              "amount_minor",
+                              "currency"
+                            ]
+                          }
+                        },
+                        "required": [
+                          "product_id",
+                          "title",
+                          "qty",
+                          "unit_price"
+                        ]
+                      }
+                    },
+                    "subtotal": {
+                      "type": "object",
+                      "properties": {
+                        "amount_minor": {
+                          "type": "string",
+                          "pattern": "^-?\\d+$"
+                        },
+                        "currency": {
+                          "type": "string",
+                          "enum": [
+                            "XOF",
+                            "GHS",
+                            "NGN",
+                            "KES"
+                          ]
+                        }
+                      },
+                      "required": [
+                        "amount_minor",
+                        "currency"
+                      ]
+                    },
+                    "delivery_fee": {
+                      "type": "object",
+                      "properties": {
+                        "amount_minor": {
+                          "type": "string",
+                          "pattern": "^-?\\d+$"
+                        },
+                        "currency": {
+                          "type": "string",
+                          "enum": [
+                            "XOF",
+                            "GHS",
+                            "NGN",
+                            "KES"
+                          ]
+                        }
+                      },
+                      "required": [
+                        "amount_minor",
+                        "currency"
+                      ]
+                    },
+                    "total": {
+                      "type": "object",
+                      "properties": {
+                        "amount_minor": {
+                          "type": "string",
+                          "pattern": "^-?\\d+$"
+                        },
+                        "currency": {
+                          "type": "string",
+                          "enum": [
+                            "XOF",
+                            "GHS",
+                            "NGN",
+                            "KES"
+                          ]
+                        }
+                      },
+                      "required": [
+                        "amount_minor",
+                        "currency"
+                      ]
+                    },
+                    "delivery_point": {
+                      "type": "object",
+                      "properties": {
+                        "lat": {
+                          "type": "number",
+                          "minimum": -90,
+                          "maximum": 90
+                        },
+                        "lng": {
+                          "type": "number",
+                          "minimum": -180,
+                          "maximum": 180
+                        },
+                        "accuracy_m": {
+                          "type": "number",
+                          "minimum": 0
+                        },
+                        "landmark": {
+                          "type": "string",
+                          "minLength": 3,
+                          "maxLength": 200
+                        }
+                      },
+                      "required": [
+                        "lat",
+                        "lng",
+                        "landmark"
+                      ]
+                    },
+                    "tracking_token": {
+                      "type": "string"
+                    },
+                    "payment_expires_at": {
+                      "type": [
+                        "string",
+                        "null"
+                      ],
+                      "format": "date-time"
+                    },
+                    "created_at": {
+                      "type": "string",
+                      "format": "date-time"
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "shop_id",
+                    "status",
+                    "items",
+                    "subtotal",
+                    "delivery_fee",
+                    "total",
+                    "delivery_point",
+                    "tracking_token",
+                    "payment_expires_at",
+                    "created_at"
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/track/{token}": {
+      "get": {
+        "operationId": "trackOrder",
+        "tags": [
+          "orders"
+        ],
+        "summary": "Tokenized tracking view (no auth)",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": {
+                      "type": "string",
+                      "enum": [
+                        "created",
+                        "payment_pending",
+                        "payment_review",
+                        "paid",
+                        "preparing",
+                        "in_delivery",
+                        "delivery_issue",
+                        "delivered",
+                        "completed",
+                        "cancelled",
+                        "expired",
+                        "refunded"
+                      ]
+                    },
+                    "delivery_status": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "eta_hint": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "history": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "status": {
+                            "type": "string"
+                          },
+                          "at": {
+                            "type": "string",
+                            "format": "date-time"
+                          }
+                        },
+                        "required": [
+                          "status",
+                          "at"
+                        ]
+                      }
+                    }
+                  },
+                  "required": [
+                    "status",
+                    "delivery_status",
+                    "eta_hint",
+                    "history"
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/checkout/{orderId}/methods": {
+      "get": {
+        "operationId": "listCheckoutMethods",
+        "tags": [
+          "payments"
+        ],
+        "summary": "Method matrix: pack ∩ seller subset, dominant first (FR-13)",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "country": {
+                      "type": "string",
+                      "enum": [
+                        "SN",
+                        "CI",
+                        "BF",
+                        "ML",
+                        "TG",
+                        "BJ",
+                        "NE"
+                      ]
+                    },
+                    "methods": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "method": {
+                            "type": "string",
+                            "enum": [
+                              "WAVE",
+                              "ORANGE_MONEY",
+                              "MTN_MOMO",
+                              "MOOV_MONEY",
+                              "MIXX_BY_YAS",
+                              "PI_SPI",
+                              "CARD",
+                              "COD",
+                              "MANUAL_TRANSFER",
+                              "MPESA",
+                              "BANK_TRANSFER_INSTANT",
+                              "AIRTEL_MONEY"
+                            ]
+                          },
+                          "label": {
+                            "type": "string"
+                          },
+                          "ussd_confirm": {
+                            "type": "boolean"
+                          },
+                          "remembered_default": {
+                            "type": "boolean"
+                          },
+                          "fee_display": {
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "method",
+                          "label",
+                          "ussd_confirm",
+                          "remembered_default"
+                        ]
+                      }
+                    }
+                  },
+                  "required": [
+                    "country",
+                    "methods"
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/orders/{id}/attempts": {
+      "post": {
+        "operationId": "createPaymentAttempt",
+        "tags": [
+          "payments"
+        ],
+        "summary": "Start payment attempt (routed, retry-able, FR-14/17)",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "method": {
+                    "type": "string",
+                    "enum": [
+                      "WAVE",
+                      "ORANGE_MONEY",
+                      "MTN_MOMO",
+                      "MOOV_MONEY",
+                      "MIXX_BY_YAS",
+                      "PI_SPI",
+                      "CARD",
+                      "COD",
+                      "MANUAL_TRANSFER",
+                      "MPESA",
+                      "BANK_TRANSFER_INSTANT",
+                      "AIRTEL_MONEY"
+                    ]
+                  },
+                  "idempotency_key": {
+                    "type": "string",
+                    "minLength": 8,
+                    "maxLength": 128
+                  }
+                },
+                "required": [
+                  "method",
+                  "idempotency_key"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "type": "string",
+                      "format": "uuid"
+                    },
+                    "order_id": {
+                      "type": "string",
+                      "format": "uuid"
+                    },
+                    "method": {
+                      "type": "string",
+                      "enum": [
+                        "WAVE",
+                        "ORANGE_MONEY",
+                        "MTN_MOMO",
+                        "MOOV_MONEY",
+                        "MIXX_BY_YAS",
+                        "PI_SPI",
+                        "CARD",
+                        "COD",
+                        "MANUAL_TRANSFER",
+                        "MPESA",
+                        "BANK_TRANSFER_INSTANT",
+                        "AIRTEL_MONEY"
+                      ]
+                    },
+                    "status": {
+                      "type": "string",
+                      "enum": [
+                        "initiated",
+                        "ussd_pending",
+                        "succeeded",
+                        "succeeded_late",
+                        "failed",
+                        "expired",
+                        "cancelled"
+                      ]
+                    },
+                    "provider_code": {
+                      "type": "string"
+                    },
+                    "provider_ref": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "amount": {
+                      "type": "object",
+                      "properties": {
+                        "amount_minor": {
+                          "type": "string",
+                          "pattern": "^-?\\d+$"
+                        },
+                        "currency": {
+                          "type": "string",
+                          "enum": [
+                            "XOF",
+                            "GHS",
+                            "NGN",
+                            "KES"
+                          ]
+                        }
+                      },
+                      "required": [
+                        "amount_minor",
+                        "currency"
+                      ]
+                    },
+                    "ussd": {
+                      "type": [
+                        "object",
+                        "null"
+                      ],
+                      "properties": {
+                        "dial_code": {
+                          "type": "string"
+                        },
+                        "expires_in_s": {
+                          "type": "integer"
+                        },
+                        "can_resend": {
+                          "type": "boolean"
+                        }
+                      },
+                      "required": [
+                        "dial_code",
+                        "expires_in_s",
+                        "can_resend"
+                      ]
+                    },
+                    "next_action": {
+                      "type": "object",
+                      "properties": {
+                        "kind": {
+                          "type": "string",
+                          "enum": [
+                            "redirect",
+                            "qr",
+                            "ussd_confirm",
+                            "manual_reference",
+                            "none"
+                          ]
+                        },
+                        "url": {
+                          "type": "string",
+                          "format": "uri"
+                        },
+                        "qr_payload": {
+                          "type": "string"
+                        },
+                        "manual_reference": {
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "kind"
+                      ]
+                    },
+                    "failure_reason": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "created_at": {
+                      "type": "string",
+                      "format": "date-time"
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "order_id",
+                    "method",
+                    "status",
+                    "provider_code",
+                    "provider_ref",
+                    "amount",
+                    "ussd",
+                    "failure_reason",
+                    "created_at"
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/attempts/{id}": {
+      "get": {
+        "operationId": "getAttempt",
+        "tags": [
+          "payments"
+        ],
+        "summary": "Attempt status (USSD countdown polling)",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "type": "string",
+                      "format": "uuid"
+                    },
+                    "order_id": {
+                      "type": "string",
+                      "format": "uuid"
+                    },
+                    "method": {
+                      "type": "string",
+                      "enum": [
+                        "WAVE",
+                        "ORANGE_MONEY",
+                        "MTN_MOMO",
+                        "MOOV_MONEY",
+                        "MIXX_BY_YAS",
+                        "PI_SPI",
+                        "CARD",
+                        "COD",
+                        "MANUAL_TRANSFER",
+                        "MPESA",
+                        "BANK_TRANSFER_INSTANT",
+                        "AIRTEL_MONEY"
+                      ]
+                    },
+                    "status": {
+                      "type": "string",
+                      "enum": [
+                        "initiated",
+                        "ussd_pending",
+                        "succeeded",
+                        "succeeded_late",
+                        "failed",
+                        "expired",
+                        "cancelled"
+                      ]
+                    },
+                    "provider_code": {
+                      "type": "string"
+                    },
+                    "provider_ref": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "amount": {
+                      "type": "object",
+                      "properties": {
+                        "amount_minor": {
+                          "type": "string",
+                          "pattern": "^-?\\d+$"
+                        },
+                        "currency": {
+                          "type": "string",
+                          "enum": [
+                            "XOF",
+                            "GHS",
+                            "NGN",
+                            "KES"
+                          ]
+                        }
+                      },
+                      "required": [
+                        "amount_minor",
+                        "currency"
+                      ]
+                    },
+                    "ussd": {
+                      "type": [
+                        "object",
+                        "null"
+                      ],
+                      "properties": {
+                        "dial_code": {
+                          "type": "string"
+                        },
+                        "expires_in_s": {
+                          "type": "integer"
+                        },
+                        "can_resend": {
+                          "type": "boolean"
+                        }
+                      },
+                      "required": [
+                        "dial_code",
+                        "expires_in_s",
+                        "can_resend"
+                      ]
+                    },
+                    "next_action": {
+                      "type": "object",
+                      "properties": {
+                        "kind": {
+                          "type": "string",
+                          "enum": [
+                            "redirect",
+                            "qr",
+                            "ussd_confirm",
+                            "manual_reference",
+                            "none"
+                          ]
+                        },
+                        "url": {
+                          "type": "string",
+                          "format": "uri"
+                        },
+                        "qr_payload": {
+                          "type": "string"
+                        },
+                        "manual_reference": {
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "kind"
+                      ]
+                    },
+                    "failure_reason": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "created_at": {
+                      "type": "string",
+                      "format": "date-time"
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "order_id",
+                    "method",
+                    "status",
+                    "provider_code",
+                    "provider_ref",
+                    "amount",
+                    "ussd",
+                    "failure_reason",
+                    "created_at"
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/webhooks/{provider}": {
+      "post": {
+        "operationId": "providerWebhook",
+        "tags": [
+          "payments"
+        ],
+        "summary": "Signed provider webhook — sole source of paid (DC-8.1)",
+        "responses": {
+          "200": {
+            "description": "OK"
+          },
+          "400": {
+            "description": "Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/orders/{id}/refund": {
+      "post": {
+        "operationId": "refundOrder",
+        "tags": [
+          "payments"
+        ],
+        "summary": "Refund per method (FR-18)",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "reason": {
+                    "type": "string",
+                    "minLength": 3
+                  },
+                  "idempotency_key": {
+                    "type": "string",
+                    "minLength": 8,
+                    "maxLength": 128
+                  }
+                },
+                "required": [
+                  "reason",
+                  "idempotency_key"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "status"
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/deliveries": {
+      "post": {
+        "operationId": "requestDelivery",
+        "tags": [
+          "delivery"
+        ],
+        "summary": "Request delivery (SELF/RIDER/PARTNER)",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "order_id": {
+                    "type": "string",
+                    "format": "uuid"
+                  },
+                  "mode": {
+                    "type": "string",
+                    "enum": [
+                      "SELF",
+                      "RIDER",
+                      "PARTNER"
+                    ]
+                  }
+                },
+                "required": [
+                  "order_id",
+                  "mode"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "type": "string",
+                      "format": "uuid"
+                    },
+                    "order_id": {
+                      "type": "string",
+                      "format": "uuid"
+                    },
+                    "mode": {
+                      "type": "string",
+                      "enum": [
+                        "SELF",
+                        "RIDER",
+                        "PARTNER"
+                      ]
+                    },
+                    "status": {
+                      "type": "string",
+                      "enum": [
+                        "requested",
+                        "broadcasting",
+                        "accepted",
+                        "picked_up",
+                        "en_route",
+                        "arrived",
+                        "delivered",
+                        "failed_attempt",
+                        "cancelled"
+                      ]
+                    },
+                    "rider_id": {
+                      "type": [
+                        "string",
+                        "null"
+                      ],
+                      "format": "uuid"
+                    },
+                    "partner_id": {
+                      "type": [
+                        "string",
+                        "null"
+                      ],
+                      "format": "uuid"
+                    },
+                    "fee": {
+                      "type": "object",
+                      "properties": {
+                        "amount_minor": {
+                          "type": "string",
+                          "pattern": "^-?\\d+$"
+                        },
+                        "currency": {
+                          "type": "string",
+                          "enum": [
+                            "XOF",
+                            "GHS",
+                            "NGN",
+                            "KES"
+                          ]
+                        }
+                      },
+                      "required": [
+                        "amount_minor",
+                        "currency"
+                      ]
+                    },
+                    "cod": {
+                      "type": "boolean"
+                    },
+                    "cod_amount": {
+                      "type": [
+                        "object",
+                        "null"
+                      ],
+                      "properties": {
+                        "amount_minor": {
+                          "type": "string",
+                          "pattern": "^-?\\d+$"
+                        },
+                        "currency": {
+                          "type": "string",
+                          "enum": [
+                            "XOF",
+                            "GHS",
+                            "NGN",
+                            "KES"
+                          ]
+                        }
+                      },
+                      "required": [
+                        "amount_minor",
+                        "currency"
+                      ]
+                    },
+                    "dropoff": {
+                      "type": "object",
+                      "properties": {
+                        "lat": {
+                          "type": "number",
+                          "minimum": -90,
+                          "maximum": 90
+                        },
+                        "lng": {
+                          "type": "number",
+                          "minimum": -180,
+                          "maximum": 180
+                        },
+                        "accuracy_m": {
+                          "type": "number",
+                          "minimum": 0
+                        },
+                        "landmark": {
+                          "type": "string",
+                          "minLength": 3,
+                          "maxLength": 200
+                        }
+                      },
+                      "required": [
+                        "lat",
+                        "lng",
+                        "landmark"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "order_id",
+                    "mode",
+                    "status",
+                    "rider_id",
+                    "partner_id",
+                    "fee",
+                    "cod",
+                    "cod_amount",
+                    "dropoff"
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/jobs/{id}/accept": {
+      "post": {
+        "operationId": "acceptJob",
+        "tags": [
+          "delivery"
+        ],
+        "summary": "Rider first-accept (race-protected)",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "type": "string",
+                      "format": "uuid"
+                    },
+                    "order_id": {
+                      "type": "string",
+                      "format": "uuid"
+                    },
+                    "mode": {
+                      "type": "string",
+                      "enum": [
+                        "SELF",
+                        "RIDER",
+                        "PARTNER"
+                      ]
+                    },
+                    "status": {
+                      "type": "string",
+                      "enum": [
+                        "requested",
+                        "broadcasting",
+                        "accepted",
+                        "picked_up",
+                        "en_route",
+                        "arrived",
+                        "delivered",
+                        "failed_attempt",
+                        "cancelled"
+                      ]
+                    },
+                    "rider_id": {
+                      "type": [
+                        "string",
+                        "null"
+                      ],
+                      "format": "uuid"
+                    },
+                    "partner_id": {
+                      "type": [
+                        "string",
+                        "null"
+                      ],
+                      "format": "uuid"
+                    },
+                    "fee": {
+                      "type": "object",
+                      "properties": {
+                        "amount_minor": {
+                          "type": "string",
+                          "pattern": "^-?\\d+$"
+                        },
+                        "currency": {
+                          "type": "string",
+                          "enum": [
+                            "XOF",
+                            "GHS",
+                            "NGN",
+                            "KES"
+                          ]
+                        }
+                      },
+                      "required": [
+                        "amount_minor",
+                        "currency"
+                      ]
+                    },
+                    "cod": {
+                      "type": "boolean"
+                    },
+                    "cod_amount": {
+                      "type": [
+                        "object",
+                        "null"
+                      ],
+                      "properties": {
+                        "amount_minor": {
+                          "type": "string",
+                          "pattern": "^-?\\d+$"
+                        },
+                        "currency": {
+                          "type": "string",
+                          "enum": [
+                            "XOF",
+                            "GHS",
+                            "NGN",
+                            "KES"
+                          ]
+                        }
+                      },
+                      "required": [
+                        "amount_minor",
+                        "currency"
+                      ]
+                    },
+                    "dropoff": {
+                      "type": "object",
+                      "properties": {
+                        "lat": {
+                          "type": "number",
+                          "minimum": -90,
+                          "maximum": 90
+                        },
+                        "lng": {
+                          "type": "number",
+                          "minimum": -180,
+                          "maximum": 180
+                        },
+                        "accuracy_m": {
+                          "type": "number",
+                          "minimum": 0
+                        },
+                        "landmark": {
+                          "type": "string",
+                          "minLength": 3,
+                          "maxLength": 200
+                        }
+                      },
+                      "required": [
+                        "lat",
+                        "lng",
+                        "landmark"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "order_id",
+                    "mode",
+                    "status",
+                    "rider_id",
+                    "partner_id",
+                    "fee",
+                    "cod",
+                    "cod_amount",
+                    "dropoff"
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/jobs/{id}/status": {
+      "post": {
+        "operationId": "updateJobStatus",
+        "tags": [
+          "delivery"
+        ],
+        "summary": "Status update (offline-queued, idempotent)",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "event_id": {
+                    "type": "string",
+                    "format": "uuid"
+                  },
+                  "status": {
+                    "type": "string",
+                    "enum": [
+                      "requested",
+                      "broadcasting",
+                      "accepted",
+                      "picked_up",
+                      "en_route",
+                      "arrived",
+                      "delivered",
+                      "failed_attempt",
+                      "cancelled"
+                    ]
+                  },
+                  "gps": {
+                    "type": "object",
+                    "properties": {
+                      "lat": {
+                        "type": "number",
+                        "minimum": -90,
+                        "maximum": 90
+                      },
+                      "lng": {
+                        "type": "number",
+                        "minimum": -180,
+                        "maximum": 180
+                      },
+                      "accuracy_m": {
+                        "type": "number",
+                        "minimum": 0
+                      }
+                    },
+                    "required": [
+                      "lat",
+                      "lng"
+                    ]
+                  },
+                  "at": {
+                    "type": "string",
+                    "format": "date-time"
+                  }
+                },
+                "required": [
+                  "event_id",
+                  "status",
+                  "at"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "type": "string",
+                      "format": "uuid"
+                    },
+                    "order_id": {
+                      "type": "string",
+                      "format": "uuid"
+                    },
+                    "mode": {
+                      "type": "string",
+                      "enum": [
+                        "SELF",
+                        "RIDER",
+                        "PARTNER"
+                      ]
+                    },
+                    "status": {
+                      "type": "string",
+                      "enum": [
+                        "requested",
+                        "broadcasting",
+                        "accepted",
+                        "picked_up",
+                        "en_route",
+                        "arrived",
+                        "delivered",
+                        "failed_attempt",
+                        "cancelled"
+                      ]
+                    },
+                    "rider_id": {
+                      "type": [
+                        "string",
+                        "null"
+                      ],
+                      "format": "uuid"
+                    },
+                    "partner_id": {
+                      "type": [
+                        "string",
+                        "null"
+                      ],
+                      "format": "uuid"
+                    },
+                    "fee": {
+                      "type": "object",
+                      "properties": {
+                        "amount_minor": {
+                          "type": "string",
+                          "pattern": "^-?\\d+$"
+                        },
+                        "currency": {
+                          "type": "string",
+                          "enum": [
+                            "XOF",
+                            "GHS",
+                            "NGN",
+                            "KES"
+                          ]
+                        }
+                      },
+                      "required": [
+                        "amount_minor",
+                        "currency"
+                      ]
+                    },
+                    "cod": {
+                      "type": "boolean"
+                    },
+                    "cod_amount": {
+                      "type": [
+                        "object",
+                        "null"
+                      ],
+                      "properties": {
+                        "amount_minor": {
+                          "type": "string",
+                          "pattern": "^-?\\d+$"
+                        },
+                        "currency": {
+                          "type": "string",
+                          "enum": [
+                            "XOF",
+                            "GHS",
+                            "NGN",
+                            "KES"
+                          ]
+                        }
+                      },
+                      "required": [
+                        "amount_minor",
+                        "currency"
+                      ]
+                    },
+                    "dropoff": {
+                      "type": "object",
+                      "properties": {
+                        "lat": {
+                          "type": "number",
+                          "minimum": -90,
+                          "maximum": 90
+                        },
+                        "lng": {
+                          "type": "number",
+                          "minimum": -180,
+                          "maximum": 180
+                        },
+                        "accuracy_m": {
+                          "type": "number",
+                          "minimum": 0
+                        },
+                        "landmark": {
+                          "type": "string",
+                          "minLength": 3,
+                          "maxLength": 200
+                        }
+                      },
+                      "required": [
+                        "lat",
+                        "lng",
+                        "landmark"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "order_id",
+                    "mode",
+                    "status",
+                    "rider_id",
+                    "partner_id",
+                    "fee",
+                    "cod",
+                    "cod_amount",
+                    "dropoff"
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/jobs/{id}/proof": {
+      "post": {
+        "operationId": "submitProof",
+        "tags": [
+          "delivery"
+        ],
+        "summary": "Proof of delivery (photo/OTP) gates close",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "anyOf": [
+                  {
+                    "type": "object",
+                    "properties": {
+                      "kind": {
+                        "type": "string",
+                        "enum": [
+                          "photo"
+                        ]
+                      },
+                      "photo_key": {
+                        "type": "string"
+                      }
+                    },
+                    "required": [
+                      "kind",
+                      "photo_key"
+                    ]
+                  },
+                  {
+                    "type": "object",
+                    "properties": {
+                      "kind": {
+                        "type": "string",
+                        "enum": [
+                          "otp"
+                        ]
+                      },
+                      "code": {
+                        "type": "string",
+                        "pattern": "^\\d{4,6}$"
+                      }
+                    },
+                    "required": [
+                      "kind",
+                      "code"
+                    ]
+                  }
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "type": "string",
+                      "format": "uuid"
+                    },
+                    "order_id": {
+                      "type": "string",
+                      "format": "uuid"
+                    },
+                    "mode": {
+                      "type": "string",
+                      "enum": [
+                        "SELF",
+                        "RIDER",
+                        "PARTNER"
+                      ]
+                    },
+                    "status": {
+                      "type": "string",
+                      "enum": [
+                        "requested",
+                        "broadcasting",
+                        "accepted",
+                        "picked_up",
+                        "en_route",
+                        "arrived",
+                        "delivered",
+                        "failed_attempt",
+                        "cancelled"
+                      ]
+                    },
+                    "rider_id": {
+                      "type": [
+                        "string",
+                        "null"
+                      ],
+                      "format": "uuid"
+                    },
+                    "partner_id": {
+                      "type": [
+                        "string",
+                        "null"
+                      ],
+                      "format": "uuid"
+                    },
+                    "fee": {
+                      "type": "object",
+                      "properties": {
+                        "amount_minor": {
+                          "type": "string",
+                          "pattern": "^-?\\d+$"
+                        },
+                        "currency": {
+                          "type": "string",
+                          "enum": [
+                            "XOF",
+                            "GHS",
+                            "NGN",
+                            "KES"
+                          ]
+                        }
+                      },
+                      "required": [
+                        "amount_minor",
+                        "currency"
+                      ]
+                    },
+                    "cod": {
+                      "type": "boolean"
+                    },
+                    "cod_amount": {
+                      "type": [
+                        "object",
+                        "null"
+                      ],
+                      "properties": {
+                        "amount_minor": {
+                          "type": "string",
+                          "pattern": "^-?\\d+$"
+                        },
+                        "currency": {
+                          "type": "string",
+                          "enum": [
+                            "XOF",
+                            "GHS",
+                            "NGN",
+                            "KES"
+                          ]
+                        }
+                      },
+                      "required": [
+                        "amount_minor",
+                        "currency"
+                      ]
+                    },
+                    "dropoff": {
+                      "type": "object",
+                      "properties": {
+                        "lat": {
+                          "type": "number",
+                          "minimum": -90,
+                          "maximum": 90
+                        },
+                        "lng": {
+                          "type": "number",
+                          "minimum": -180,
+                          "maximum": 180
+                        },
+                        "accuracy_m": {
+                          "type": "number",
+                          "minimum": 0
+                        },
+                        "landmark": {
+                          "type": "string",
+                          "minLength": 3,
+                          "maxLength": 200
+                        }
+                      },
+                      "required": [
+                        "lat",
+                        "lng",
+                        "landmark"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "order_id",
+                    "mode",
+                    "status",
+                    "rider_id",
+                    "partner_id",
+                    "fee",
+                    "cod",
+                    "cod_amount",
+                    "dropoff"
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/riders/remittances": {
+      "post": {
+        "operationId": "remitCod",
+        "tags": [
+          "delivery"
+        ],
+        "summary": "COD remittance via PI-SPI or agent deposit (FR-34b)",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "amount": {
+                    "type": "object",
+                    "properties": {
+                      "amount_minor": {
+                        "type": "string",
+                        "pattern": "^-?\\d+$"
+                      },
+                      "currency": {
+                        "type": "string",
+                        "enum": [
+                          "XOF",
+                          "GHS",
+                          "NGN",
+                          "KES"
+                        ]
+                      }
+                    },
+                    "required": [
+                      "amount_minor",
+                      "currency"
+                    ]
+                  },
+                  "rail": {
+                    "type": "string",
+                    "enum": [
+                      "PI_SPI",
+                      "AGENT_DEPOSIT"
+                    ]
+                  },
+                  "idempotency_key": {
+                    "type": "string",
+                    "minLength": 8,
+                    "maxLength": 128
+                  }
+                },
+                "required": [
+                  "amount",
+                  "rail",
+                  "idempotency_key"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "status"
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/balance": {
+      "get": {
+        "operationId": "getBalance",
+        "tags": [
+          "payouts"
+        ],
+        "summary": "Seller/rider balance view",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "available": {
+                      "type": "object",
+                      "properties": {
+                        "amount_minor": {
+                          "type": "string",
+                          "pattern": "^-?\\d+$"
+                        },
+                        "currency": {
+                          "type": "string",
+                          "enum": [
+                            "XOF",
+                            "GHS",
+                            "NGN",
+                            "KES"
+                          ]
+                        }
+                      },
+                      "required": [
+                        "amount_minor",
+                        "currency"
+                      ]
+                    },
+                    "pending": {
+                      "type": "object",
+                      "properties": {
+                        "amount_minor": {
+                          "type": "string",
+                          "pattern": "^-?\\d+$"
+                        },
+                        "currency": {
+                          "type": "string",
+                          "enum": [
+                            "XOF",
+                            "GHS",
+                            "NGN",
+                            "KES"
+                          ]
+                        }
+                      },
+                      "required": [
+                        "amount_minor",
+                        "currency"
+                      ]
+                    },
+                    "payout_limit_remaining_today": {
+                      "type": "object",
+                      "properties": {
+                        "amount_minor": {
+                          "type": "string",
+                          "pattern": "^-?\\d+$"
+                        },
+                        "currency": {
+                          "type": "string",
+                          "enum": [
+                            "XOF",
+                            "GHS",
+                            "NGN",
+                            "KES"
+                          ]
+                        }
+                      },
+                      "required": [
+                        "amount_minor",
+                        "currency"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "available",
+                    "pending",
+                    "payout_limit_remaining_today"
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/payouts": {
+      "post": {
+        "operationId": "requestPayout",
+        "tags": [
+          "payouts"
+        ],
+        "summary": "Payout — PI-SPI first, tier limits (FR-20)",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "amount": {
+                    "type": "object",
+                    "properties": {
+                      "amount_minor": {
+                        "type": "string",
+                        "pattern": "^-?\\d+$"
+                      },
+                      "currency": {
+                        "type": "string",
+                        "enum": [
+                          "XOF",
+                          "GHS",
+                          "NGN",
+                          "KES"
+                        ]
+                      }
+                    },
+                    "required": [
+                      "amount_minor",
+                      "currency"
+                    ]
+                  },
+                  "payout_pin": {
+                    "type": "string",
+                    "pattern": "^\\d{4,6}$"
+                  },
+                  "idempotency_key": {
+                    "type": "string",
+                    "minLength": 8,
+                    "maxLength": 128
+                  }
+                },
+                "required": [
+                  "amount",
+                  "idempotency_key"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "type": "string",
+                      "format": "uuid"
+                    },
+                    "amount": {
+                      "type": "object",
+                      "properties": {
+                        "amount_minor": {
+                          "type": "string",
+                          "pattern": "^-?\\d+$"
+                        },
+                        "currency": {
+                          "type": "string",
+                          "enum": [
+                            "XOF",
+                            "GHS",
+                            "NGN",
+                            "KES"
+                          ]
+                        }
+                      },
+                      "required": [
+                        "amount_minor",
+                        "currency"
+                      ]
+                    },
+                    "rail": {
+                      "type": "string",
+                      "enum": [
+                        "PI_SPI",
+                        "AGGREGATOR"
+                      ]
+                    },
+                    "status": {
+                      "type": "string",
+                      "enum": [
+                        "requested",
+                        "processing",
+                        "settled",
+                        "failed",
+                        "held_review"
+                      ]
+                    },
+                    "created_at": {
+                      "type": "string",
+                      "format": "date-time"
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "amount",
+                    "rail",
+                    "status",
+                    "created_at"
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "webhooks": {}
+}
