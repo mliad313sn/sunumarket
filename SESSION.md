@@ -2,9 +2,9 @@
 
 > Updated every working session per Playbook rule 0.2. This file is the recovery point.
 
-- **Current phase:** 11 — PWA hardening, i18n, data-saver
-- **Checkpoint:** Phase 10 closed green (gate-10). Ratings post-delivered w/ dup guard, disputes w/ scoped payout freeze + auto-attached proof + admin resolution→refund, reports/takedowns audited, admin dashboard/phone search/timeline/audit, config panels: route flip applies to next attempt (no deploy), MANUAL_TRANSFER toggle on/off flips checkout. 162 tests.
-- **Exact next action:** Phase 11 — web PWA (marketplace, product, checkout w/ DC-14 USSD screen, tracking), i18n FR/EN, data-saver mode, service worker offline queue, analytics events; then Phase 12 release artifacts.
+- **Current phase:** 12 — System test, expansion drill, compliance, release
+- **Checkpoint:** Phase 11 closed green (gate-11). Buyer PWA (marketplace/product/checkout with DC-14 USSD screen + QR + COD, tracking, offline order queue, data-saver, FR/EN i18n, funnel analytics incl. USSD abandonment), rider PWA (feed/accept/status offline queue/OTP proof/PI-SPI remittance), admin console (queues + config + resolution actions). Bundles: web 52.7KB gz, rider 48.4KB gz, admin 47.8KB gz (≤300KB budget). 6 web unit tests.
+- **Exact next action:** Phase 12 — consolidated 10-golden-path E2E vs real HTTP stack, Mali expansion drill (NFR-8), compliance checklists SN/CI/BF, runbooks + guides, security checks, READY_TO_MARKET_REPORT.
 - **Branch:** `claude/execute-zip-instructions-2qmy1f`
 
 ## Environment notes (this build sandbox)
@@ -20,3 +20,4 @@
 - 2026-08-20 gate-7+8 PASSED: see docs/reports/GATE-8-SUMMARY.md. 129 tests; API coverage 91.8%; turbo globalEnv fixed so CI runs DB suites.
 - 2026-08-20 gate-9 PASSED: delivery suite 9/9 stable ×2; golden paths 5,6,7 green; COD invariant Σcollected=Σremitted+outstanding proven from append-only ledger.
 - 2026-08-20 gate-10 PASSED: trust/admin suite 8/8; config-change tests prove no-deploy flips; support scenario incl. reconciliation-flag resolution end-to-end.
+- 2026-08-20 gate-11 PASSED: i18n FR/EN parity test, USSD countdown pure tests, offline queue exactly-once flush tests, funnel event set incl. ussd_abandoned; all 3 bundles ≤53KB gzip.
