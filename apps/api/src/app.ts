@@ -1,9 +1,16 @@
 import Fastify from "fastify";
 import cors from "@fastify/cors";
+import jwt from "@fastify/jwt";
+import { buildDeps, type AppDeps } from "./deps.js";
+import { registerAuthRoutes } from "./modules/auth/auth.routes.js";
 
-export async function buildApp() {
-  const app = Fastify({ logger: process.env.NODE_ENV !== "test" });
+export async function buildApp(depOverrides: Partial<AppDeps> = {}) {
+  const app = Fastify({ logger: process.env.NODE_ENV !== "test" && !process.env.VITEST });
   await app.register(cors, { origin: true });
+  await app.register(jwt, { secret: process.env.JWT_SECRET ?? "dev-secret-change-me" });
+
+  const deps = buildDeps(depOverrides);
+  app.decorate("deps", deps);
 
   app.get("/health", async () => ({
     status: "ok",
@@ -11,5 +18,13 @@ export async function buildApp() {
     time: new Date().toISOString()
   }));
 
+  registerAuthRoutes(app, deps);
+
   return app;
+}
+
+declare module "fastify" {
+  interface FastifyInstance {
+    deps: AppDeps;
+  }
 }

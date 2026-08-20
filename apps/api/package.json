@@ -17,6 +17,7 @@
   },
   "dependencies": {
     "@fastify/cors": "^10.0.0",
+    "@fastify/jwt": "^10.2.2",
     "@prisma/client": "^6.0.0",
     "@sunumarket/config": "workspace:*",
     "@sunumarket/shared": "workspace:*",
