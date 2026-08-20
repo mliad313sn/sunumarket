@@ -8,6 +8,7 @@ import type { VelocityRules } from "../fraud/velocity.js";
 import type { OrdersService } from "../orders/orders.service.js";
 import type { ProviderRouter } from "./router.js";
 import type { InitRequest } from "./provider.js";
+import type { LedgerService } from "../ledger/ledger.service.js";
 
 const USSD_COUNTDOWN_S = 120;
 
@@ -53,8 +54,26 @@ export class PaymentsService {
     private readonly orders: OrdersService,
     private readonly velocity: VelocityRules,
     private readonly fraud: FraudService,
-    private readonly messaging: MessagingProvider
+    private readonly messaging: MessagingProvider,
+    private readonly ledger: LedgerService
   ) {}
+
+  /** Record the sale split in the double-entry ledger once an online payment lands (FR-19). */
+  private async recordSaleFor(attemptId: string, direct = false): Promise<void> {
+    const attempt = await this.prisma.paymentAttempt.findUniqueOrThrow({
+      where: { id: attemptId },
+      include: { order: { include: { shop: true } } }
+    });
+    await this.ledger.recordSale({
+      orderId: attempt.orderId,
+      attemptId,
+      sellerId: attempt.order.shop.sellerId,
+      country: attempt.order.shop.country,
+      grossMinor: attempt.order.totalMinor,
+      currency: attempt.order.currency,
+      direct
+    });
+  }
 
   /** FR-13: pack ∩ seller subset, dominant first; remembered non-locking default (DC-4); guided mode (DC-2). */
   async checkoutMethods(orderId: string) {
@@ -303,6 +322,7 @@ export class PaymentsService {
     if (["initiated", "ussd_pending"].includes(attempt.status) && order.status === "payment_pending") {
       await this.prisma.paymentAttempt.update({ where: { id: attempt.id }, data: { status: "succeeded" } });
       await this.orders.transition(order.id, "paid");
+      await this.recordSaleFor(attempt.id);
       await this.notify(order.guestPhone, "SunuMarket: paiement reçu — commande PAYÉE ✓");
       return "applied";
     }
@@ -316,6 +336,7 @@ export class PaymentsService {
       });
       await this.prisma.paymentAttempt.update({ where: { id: attempt.id }, data: { status: "succeeded" } });
       await this.orders.transition(order.id, "paid");
+      await this.recordSaleFor(attempt.id);
       return "applied";
     }
 
@@ -395,6 +416,26 @@ export class PaymentsService {
     if (attempt.order.status !== "payment_review") throw new PaymentError("invalid_state", "commande non en revue");
     await this.prisma.paymentAttempt.update({ where: { id: attempt.id }, data: { status: "succeeded" } });
     await this.orders.transition(attempt.orderId, "paid");
+    // Manual transfer: money went seller-direct — record gross with no fee split.
+    await this.recordSaleFor(attempt.id, true);
+  }
+
+  /** FR-18: refund a paid order per its method (PI-SPI reverse / aggregator refund). */
+  async refundOrder(orderId: string, reason: string): Promise<void> {
+    const attempt = await this.prisma.paymentAttempt.findFirst({
+      where: { orderId, status: "succeeded" },
+      include: { provider: true, transaction: true, order: true }
+    });
+    if (!attempt) throw new PaymentError("invalid_state", "aucun paiement à rembourser");
+    await this.orders.transition(orderId, "refunded");
+    if (attempt.provider && attempt.providerRef) {
+      const p = this.router.provider(attempt.provider.code);
+      await p.refund(attempt.providerRef, attempt.order.totalMinor, attempt.order.currency);
+    }
+    if (attempt.transaction) {
+      await this.ledger.recordRefund(attempt.transaction.id, reason);
+    }
+    await this.notify(attempt.order.guestPhone, "SunuMarket: votre remboursement est en cours.");
   }
 
   private async notify(phone: string | null, body: string): Promise<void> {

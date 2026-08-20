@@ -1,5 +1,6 @@
 {
   "$schema": "https://turbo.build/schema.json",
+  "globalEnv": ["DATABASE_URL", "REDIS_URL", "JWT_SECRET", "NODE_ENV", "MOCK_AGG_A_SECRET", "MOCK_AGG_B_SECRET", "MOCK_PISPI_SECRET", "SUNU_DEVICE_COOLDOWN_MS", "SUNU_PIN_RETENTION_DAYS", "SUNU_ALLOW_MANUAL_TRANSFER"],
   "tasks": {
     "build": {
       "dependsOn": ["^build"],

@@ -24,11 +24,12 @@ afterAll(async () => {
 d("phase 4 — shops & products", () => {
   it("creates a shop in one call (wizard ≤5 steps) with pack-default methods, slug uniquified", async () => {
     const city = await app.deps.prisma.city.findFirstOrThrow({ where: { country: "SN" } });
+    const name = `Test Boutique Wax ${Date.now()}`;
     const res = await app.inject({
       method: "POST",
       url: "/shops",
       headers: { authorization: `Bearer ${sellerToken}` },
-      payload: { name: "Test Boutique Wax", country: "SN", city_id: city.id }
+      payload: { name, country: "SN", city_id: city.id }
     });
     expect(res.statusCode).toBe(201);
     const shop = res.json();
@@ -41,7 +42,7 @@ d("phase 4 — shops & products", () => {
       method: "POST",
       url: "/shops",
       headers: { authorization: `Bearer ${sellerToken}` },
-      payload: { name: "Test Boutique Wax", country: "SN", city_id: city.id }
+      payload: { name, country: "SN", city_id: city.id }
     });
     expect(res2.json().slug).toBe(`${shop.slug}-2`);
   });

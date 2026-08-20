@@ -7,6 +7,7 @@ import { registerCatalogRoutes } from "./modules/catalog/catalog.routes.js";
 import { registerGeoRoutes } from "./modules/geo/geo.routes.js";
 import { registerOrderRoutes } from "./modules/orders/orders.routes.js";
 import { registerPaymentRoutes } from "./modules/payments/payments.routes.js";
+import { registerPayoutRoutes } from "./modules/payouts/payouts.routes.js";
 
 export async function buildApp(depOverrides: Partial<AppDeps> = {}) {
   const app = Fastify({ logger: process.env.NODE_ENV !== "test" && !process.env.VITEST });
@@ -27,6 +28,7 @@ export async function buildApp(depOverrides: Partial<AppDeps> = {}) {
   registerGeoRoutes(app, deps);
   registerOrderRoutes(app, deps);
   registerPaymentRoutes(app, deps);
+  registerPayoutRoutes(app, deps);
 
   return app;
 }

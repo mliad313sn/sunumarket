@@ -1,0 +1,113 @@
+import { randomUUID } from "node:crypto";
+import type { PrismaClient } from "@prisma/client";
+import type { AuthService } from "../auth/auth.service.js";
+import type { KycService } from "../kyc/kyc.service.js";
+import type { LedgerService } from "../ledger/ledger.service.js";
+import type { MockPiSpiProvider } from "../payments/mock-provider.js";
+
+export class PayoutError extends Error {
+  constructor(
+    public readonly code: "insufficient_balance" | "device_blocked" | "pin_required" | "rail_down" | "duplicate",
+    message: string
+  ) {
+    super(message);
+    this.name = "PayoutError";
+  }
+}
+
+/**
+ * Payouts — FR-20. PI-SPI first (instant, wallet-agnostic, near-zero cost),
+ * aggregator payout as fallback; KYC tier limits; device cool-down gate;
+ * optional payout PIN (DC-8.3).
+ */
+export class PayoutsService {
+  /** Aggregator fallback recorder (mock rail). */
+  readonly aggregatorPayouts: Array<{ sellerId: string; amountMinor: bigint }> = [];
+
+  constructor(
+    private readonly prisma: PrismaClient,
+    private readonly ledger: LedgerService,
+    private readonly kyc: KycService,
+    private readonly auth: AuthService,
+    private readonly piSpi: MockPiSpiProvider
+  ) {}
+
+  async requestPayout(
+    sellerId: string,
+    amountMinor: bigint,
+    opts: { pin?: string | undefined; deviceHash: string; idempotencyKey: string }
+  ) {
+    const dup = await this.prisma.payout.findUnique({ where: { idempotencyKey: opts.idempotencyKey } });
+    if (dup) return this.viewOf(dup);
+
+    const gate = await this.auth.payoutAllowed(sellerId, opts.deviceHash);
+    if (!gate.allowed) throw new PayoutError("device_blocked", gate.reason ?? "appareil bloqué");
+
+    if (!(await this.auth.verifyPayoutPin(sellerId, opts.pin))) {
+      throw new PayoutError("pin_required", "PIN de retrait incorrect");
+    }
+
+    await this.kyc.assertPayoutWithinLimit(sellerId, amountMinor);
+
+    const balance = await this.ledger.balance("seller", sellerId, "XOF");
+    if (balance < amountMinor) {
+      throw new PayoutError("insufficient_balance", "solde insuffisant");
+    }
+
+    // PI-SPI first, aggregator fallback (FR-20).
+    let rail = "PI_SPI";
+    const transfer = await this.piSpi.transfer(`seller:${sellerId}`, amountMinor, "payout");
+    if (!transfer.ok) {
+      rail = "AGGREGATOR";
+      this.aggregatorPayouts.push({ sellerId, amountMinor });
+    }
+
+    const payout = await this.prisma.payout.create({
+      data: {
+        sellerId,
+        amountMinor,
+        currency: "XOF",
+        rail,
+        status: "settled", // instant in mock; real adapters transition async
+        pinVerified: true,
+        idempotencyKey: opts.idempotencyKey
+      }
+    });
+    await this.ledger.recordPayout({ sellerId, amountMinor, currency: "XOF", rail, payoutId: payout.id });
+    return this.viewOf(payout);
+  }
+
+  async balanceView(sellerId: string, country: string) {
+    const available = await this.ledger.balance("seller", sellerId, "XOF");
+    const user = await this.prisma.user.findUniqueOrThrow({ where: { id: sellerId } });
+    const tier = Math.min(Math.max(user.kycTier, 0), 2) as 0 | 1 | 2;
+    const startOfDay = new Date();
+    startOfDay.setUTCHours(0, 0, 0, 0);
+    const todays = await this.prisma.payout.aggregate({
+      where: { sellerId, createdAt: { gte: startOfDay }, status: { notIn: ["failed"] } },
+      _sum: { amountMinor: true }
+    });
+    const used = todays._sum.amountMinor ?? 0n;
+    void country;
+    return {
+      available: { amount_minor: available.toString(), currency: "XOF" },
+      pending: { amount_minor: "0", currency: "XOF" },
+      payout_used_today: { amount_minor: used.toString(), currency: "XOF" },
+      kyc_tier: tier
+    };
+  }
+
+  private viewOf(p: { id: string; amountMinor: bigint; currency: string; rail: string; status: string; createdAt: Date }) {
+    return {
+      id: p.id,
+      amount: { amount_minor: p.amountMinor.toString(), currency: p.currency },
+      rail: p.rail,
+      status: p.status,
+      created_at: p.createdAt.toISOString()
+    };
+  }
+
+  static newIdempotencyKey(): string {
+    return `payout-${randomUUID()}`;
+  }
+}

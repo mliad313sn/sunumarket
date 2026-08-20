@@ -12,6 +12,9 @@ import { OrdersService } from "./modules/orders/orders.service.js";
 import { MockPaymentProvider, MockPiSpiProvider } from "./modules/payments/mock-provider.js";
 import { ProviderRouter } from "./modules/payments/router.js";
 import { PaymentsService } from "./modules/payments/payments.service.js";
+import { LedgerService } from "./modules/ledger/ledger.service.js";
+import { PayoutsService } from "./modules/payouts/payouts.service.js";
+import { ReconciliationService } from "./modules/reconciliation/reconciliation.service.js";
 
 export interface AppDeps {
   prisma: PrismaClient;
@@ -29,6 +32,9 @@ export interface AppDeps {
   mockAggA: MockPaymentProvider;
   mockAggB: MockPaymentProvider;
   mockPiSpi: MockPiSpiProvider;
+  ledger: LedgerService;
+  payouts: PayoutsService;
+  reconciliation: ReconciliationService;
 }
 
 export function buildDeps(overrides: Partial<AppDeps> = {}): AppDeps {
@@ -46,7 +52,10 @@ export function buildDeps(overrides: Partial<AppDeps> = {}): AppDeps {
   const mockAggB = overrides.mockAggB ?? new MockPaymentProvider("AGG_B", process.env.MOCK_AGG_B_SECRET ?? "agg-b-secret");
   const mockPiSpi = overrides.mockPiSpi ?? new MockPiSpiProvider(process.env.MOCK_PISPI_SECRET ?? "pispi-secret");
   const router = overrides.router ?? new ProviderRouter(packs, [mockAggA, mockAggB, mockPiSpi]);
+  const ledger = overrides.ledger ?? new LedgerService(prisma, packs);
   const payments =
-    overrides.payments ?? new PaymentsService(prisma, packs, router, orders, velocity, fraud, messaging);
-  return { prisma, packs, messaging, velocity, fraud, auth, kyc, catalog, geo, orders, router, payments, mockAggA, mockAggB, mockPiSpi };
+    overrides.payments ?? new PaymentsService(prisma, packs, router, orders, velocity, fraud, messaging, ledger);
+  const payouts = overrides.payouts ?? new PayoutsService(prisma, ledger, kyc, auth, mockPiSpi);
+  const reconciliation = overrides.reconciliation ?? new ReconciliationService(prisma);
+  return { prisma, packs, messaging, velocity, fraud, auth, kyc, catalog, geo, orders, router, payments, mockAggA, mockAggB, mockPiSpi, ledger, payouts, reconciliation };
 }
