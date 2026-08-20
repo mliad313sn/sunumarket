@@ -2,9 +2,9 @@
 
 > Updated every working session per Playbook rule 0.2. This file is the recovery point.
 
-- **Current phase:** 9 — Delivery network (riders, partners, COD)
-- **Checkpoint:** Phases 7-8 closed green (gate-7, gate-8). Full payments stack: routing+breaker+failover, webhook-only paid, USSD UX, manual transfer hardened, ledger Σ=0 fuzz-proven, PI-SPI payouts, settlement reconciliation with matcher + flags + close report, education cards. GATE-8 summary in docs/reports/.
-- **Exact next action:** Phase 9 — delivery jobs, broadcast first-accept dispatch (race test), rider status flow + offline queue, proof-gated delivery, partner adapter + webhooks, COD collection + rider cash ledger + PI-SPI remittance, incidents + refund wiring, ratings data model.
+- **Current phase:** 10 — Trust, disputes, moderation, admin
+- **Checkpoint:** Phase 9 closed green (gate-9). Dispatch machine (exhaustive), broadcast first-accept (20-parallel race → 1 winner), rider COD full cycle w/ OTP proof gate, offline-idempotent status sync, PI-SPI remittance + COD invariant, incidents → delivery_issue → refund, partner adapter w/ signed webhooks (replay/tamper), PARTNER→RIDER fallback, rider isolation. 154 tests total.
+- **Exact next action:** Phase 10 — ratings post-delivered, disputes w/ scoped payout freeze + auto-attached proof, reports/takedowns, admin console endpoints (global phone search, timelines, config panels incl. provider route flip + MANUAL_TRANSFER toggle), audit log.
 - **Branch:** `claude/execute-zip-instructions-2qmy1f`
 
 ## Environment notes (this build sandbox)
@@ -18,3 +18,4 @@
 - 2026-08-20 gate-3 PASSED: OTP happy/lockout/throttle/expiry; refresh rotation + reuse revokes family; new-device Tier-1 re-verify + cool-down gate; RBAC matrix 5 roles + anonymous + expired; velocity 10-in-5min flag once + soft-block expiry; tier-limit block with upgrade path; COD cap. RBAC report in docs/reports/.
 - 2026-08-20 gates 4-6 PASSED: catalog suite (6), geo suite (5, incl. PostGIS cross-check + retention idempotent), orders suite (9: race 20→1, idempotency, expiry-once, illegal transitions, tracking rotation, inbox isolation); shared order machine exhaustive sweep + geo fixtures 20/20.
 - 2026-08-20 gate-7+8 PASSED: see docs/reports/GATE-8-SUMMARY.md. 129 tests; API coverage 91.8%; turbo globalEnv fixed so CI runs DB suites.
+- 2026-08-20 gate-9 PASSED: delivery suite 9/9 stable ×2; golden paths 5,6,7 green; COD invariant Σcollected=Σremitted+outstanding proven from append-only ledger.

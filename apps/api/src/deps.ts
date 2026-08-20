@@ -15,6 +15,8 @@ import { PaymentsService } from "./modules/payments/payments.service.js";
 import { LedgerService } from "./modules/ledger/ledger.service.js";
 import { PayoutsService } from "./modules/payouts/payouts.service.js";
 import { ReconciliationService } from "./modules/reconciliation/reconciliation.service.js";
+import { DeliveryService } from "./modules/delivery/delivery.service.js";
+import { MockPartnerAdapter, type DeliveryPartnerAdapter } from "./modules/delivery/partner-adapter.js";
 
 export interface AppDeps {
   prisma: PrismaClient;
@@ -35,6 +37,8 @@ export interface AppDeps {
   ledger: LedgerService;
   payouts: PayoutsService;
   reconciliation: ReconciliationService;
+  delivery: DeliveryService;
+  mockPartner: MockPartnerAdapter;
 }
 
 export function buildDeps(overrides: Partial<AppDeps> = {}): AppDeps {
@@ -57,5 +61,9 @@ export function buildDeps(overrides: Partial<AppDeps> = {}): AppDeps {
     overrides.payments ?? new PaymentsService(prisma, packs, router, orders, velocity, fraud, messaging, ledger);
   const payouts = overrides.payouts ?? new PayoutsService(prisma, ledger, kyc, auth, mockPiSpi);
   const reconciliation = overrides.reconciliation ?? new ReconciliationService(prisma);
-  return { prisma, packs, messaging, velocity, fraud, auth, kyc, catalog, geo, orders, router, payments, mockAggA, mockAggB, mockPiSpi, ledger, payouts, reconciliation };
+  const mockPartner = overrides.mockPartner ?? new MockPartnerAdapter("MOCK", process.env.PARTNER_DIALOG_WEBHOOK_SECRET ?? "partner-secret");
+  const partnerAdapters = new Map<string, DeliveryPartnerAdapter>([["MOCK", mockPartner]]);
+  const delivery =
+    overrides.delivery ?? new DeliveryService(prisma, orders, kyc, mockPiSpi, messaging, partnerAdapters);
+  return { prisma, packs, messaging, velocity, fraud, auth, kyc, catalog, geo, orders, router, payments, mockAggA, mockAggB, mockPiSpi, ledger, payouts, reconciliation, delivery, mockPartner };
 }
