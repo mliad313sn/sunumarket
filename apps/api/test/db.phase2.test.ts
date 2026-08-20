@@ -55,6 +55,12 @@ d("phase 2 — immutability triggers", () => {
     const row = await prisma.riderCashLedger.create({
       data: { riderId: rider.userId, amountMinor: 45000n, currency: "XOF", kind: "cod_collected" }
     });
+    // keep the COD cache invariant honest (this test writes the ledger directly)
+    const sum = await prisma.riderCashLedger.aggregate({ where: { riderId: rider.userId }, _sum: { amountMinor: true } });
+    await prisma.rider.update({
+      where: { userId: rider.userId },
+      data: { codOutstandingMinor: sum._sum.amountMinor ?? 0n }
+    });
     await expect(
       prisma.riderCashLedger.update({ where: { id: row.id }, data: { amountMinor: 1n } })
     ).rejects.toThrow(/append-only/);

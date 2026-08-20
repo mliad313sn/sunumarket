@@ -40,7 +40,7 @@ d("phase 8 — double-entry ledger (FR-19)", () => {
           data: {
             orderId: (await anyPaidOrder()).id,
             method: "WAVE",
-            status: "succeeded",
+            status: "succeeded_late",
             idempotencyKey: `led-${Date.now()}-1`,
             providerRef: `LED-${Date.now()}-1`
           }
@@ -64,7 +64,7 @@ d("phase 8 — double-entry ledger (FR-19)", () => {
       data: {
         orderId: (await anyPaidOrder()).id,
         method: "WAVE",
-        status: "succeeded",
+        status: "succeeded_late",
         idempotencyKey: `led-${Date.now()}-2`,
         providerRef: `LED-${Date.now()}-2`
       }
@@ -90,7 +90,7 @@ d("phase 8 — double-entry ledger (FR-19)", () => {
         data: {
           orderId: order.id,
           method: ["WAVE", "ORANGE_MONEY", "MTN_MOMO", "PI_SPI"][i % 4]!,
-          status: "succeeded",
+          status: "succeeded_late",
           idempotencyKey: `fuzz-${Date.now()}-${i}`,
           providerRef: `FUZZ-${Date.now()}-${i}`
         }
@@ -115,7 +115,7 @@ async function anyPaidOrder() {
   const existing = await app.deps.prisma.order.findFirst({ where: { status: "paid" } });
   if (existing) return existing;
   const shop = await app.deps.prisma.shop.findFirstOrThrow();
-  return app.deps.prisma.order.create({
+  const order = await app.deps.prisma.order.create({
     data: {
       shopId: shop.id,
       status: "paid",
@@ -128,4 +128,15 @@ async function anyPaidOrder() {
       trackingToken: `ledger-anchor-${Date.now()}`
     }
   });
+  // keep invariant #7 honest: a paid order carries exactly one succeeded attempt
+  await app.deps.prisma.paymentAttempt.create({
+    data: {
+      orderId: order.id,
+      method: "COD",
+      status: "succeeded",
+      idempotencyKey: `ledger-anchor-att-${Date.now()}`,
+      providerRef: `LEDGER-ANCHOR-${Date.now()}`
+    }
+  });
+  return order;
 }

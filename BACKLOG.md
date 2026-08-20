@@ -1,5 +1,12 @@
 # BACKLOG
 
+## ⚠ DESCOPED in this build environment (see READY_TO_MARKET_REPORT §4)
+- Expo mobile app + EAS signed Android build (Phase 12) — PWAs cover flows meanwhile.
+- Staging/prod deploy, Sentry wiring, backup+restore drill (no deploy target in sandbox).
+- ZAP baseline / k6 execution / infra-level chaos / Lighthouse CI — scripts + criteria shipped (load/, scripts/invariants.sql), to run against staging.
+- Redis-backed circuit-breaker + pack-override store for multi-instance prod (in-memory today).
+- Client image compression ≤200KB + MinIO upload wiring (media pipeline).
+
 ## V1 open items (tracked per phase in Playbook)
 - Phase 12: Expo mobile app (seller + rider tabs), EAS signed build.
 - Real aggregator adapters (AggregatorA/B) against sandboxes — mock-first per Playbook rule 0.5; credentials via env only.

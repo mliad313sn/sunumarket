@@ -38,7 +38,7 @@ export function registerCatalogRoutes(app: FastifyInstance, deps: AppDeps): void
     }
   });
 
-  app.post("/shops/:id/methods", { preHandler: requireRoles("seller") }, async (req, reply) => {
+  app.post("/shops/:id/methods", { preHandler: requireRoles() }, async (req, reply) => {
     const { id } = req.params as { id: string };
     const { methods } = req.body as { methods: string[] };
     try {
@@ -52,7 +52,7 @@ export function registerCatalogRoutes(app: FastifyInstance, deps: AppDeps): void
     }
   });
 
-  app.post("/shops/:id/products", { preHandler: requireRoles("seller") }, async (req, reply) => {
+  app.post("/shops/:id/products", { preHandler: requireRoles() }, async (req, reply) => {
     const { id } = req.params as { id: string };
     const body = createProductBody.parse(req.body);
     try {
