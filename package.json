@@ -1,0 +1,28 @@
+{
+  "name": "sunumarket",
+  "private": true,
+  "version": "0.1.0",
+  "packageManager": "pnpm@10.33.0",
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "dev": "turbo run dev",
+    "build": "turbo run build",
+    "lint": "turbo run lint",
+    "typecheck": "turbo run typecheck",
+    "test": "turbo run test",
+    "test:coverage": "turbo run test:coverage",
+    "test:e2e": "turbo run test:e2e",
+    "db:migrate": "pnpm --filter @sunumarket/api db:migrate",
+    "db:seed": "pnpm --filter @sunumarket/api db:seed",
+    "setup": "bash scripts/setup.sh"
+  },
+  "devDependencies": {
+    "@types/node": "^26.2.0",
+    "eslint": "^9.39.5",
+    "turbo": "^2.5.0",
+    "typescript": "^5.9.3",
+    "typescript-eslint": "^8.67.0"
+  }
+}

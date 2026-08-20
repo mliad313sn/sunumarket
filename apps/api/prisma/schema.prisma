@@ -1,0 +1,13 @@
+// SunuMarket schema — expanded per phase (see docs/AUTONOMOUS_BUILD_PLAYBOOK.md).
+// PostGIS types are managed via raw SQL in migrations ("Unsupported" columns).
+
+generator client {
+  provider        = "prisma-client-js"
+  previewFeatures = ["postgresqlExtensions"]
+}
+
+datasource db {
+  provider   = "postgresql"
+  url        = env("DATABASE_URL")
+  extensions = [postgis]
+}

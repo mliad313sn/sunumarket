@@ -1,0 +1,6 @@
+{
+  "name": "@sunumarket/mobile",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Expo app (seller + rider tabs) — built in Phase 12 per the Playbook."
+}
