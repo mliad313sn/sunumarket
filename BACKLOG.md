@@ -10,3 +10,4 @@
 - Cross-seller cart, live GPS streaming, route optimization, buyer wallets,
   multi-currency checkout, iOS submission, ads, own map tiles,
   cross-border purchases, USSD full storefront, Wave-3 country launches (design-ready only), crypto/stablecoins.
+- Privacy note: /me delete must ANONYMIZE (fraud_events/audit are append-only, FKs SetNull is blocked by guard) — implement anonymizing delete in Phase 10/12 hardening.

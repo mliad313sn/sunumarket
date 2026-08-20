@@ -8,7 +8,9 @@ const d = describe.skipIf(!url);
 const messaging = new MockMessagingProvider();
 let app: Awaited<ReturnType<typeof buildApp>>;
 
-const PHONE = "+221779990001";
+// Run-unique phone: users can't be hard-deleted once referenced by append-only
+// fraud_events (immutability trigger — by design; privacy deletes anonymize instead).
+const PHONE = `+22177${Math.floor(1000000 + Math.random() * 9000000)}`;
 const DEVICE = "device-hash-test-0001";
 
 function otpFor(phone: string): string {
@@ -20,15 +22,6 @@ function otpFor(phone: string): string {
 
 beforeAll(async () => {
   app = await buildApp({ messaging });
-  // clean slate for the test phone
-  const prisma = app.deps.prisma;
-  const user = await prisma.user.findUnique({ where: { phone: PHONE } });
-  if (user) {
-    await prisma.refreshToken.deleteMany({ where: { userId: user.id } });
-    await prisma.deviceBinding.deleteMany({ where: { userId: user.id } });
-    await prisma.user.delete({ where: { id: user.id } });
-  }
-  await prisma.otpCode.deleteMany({ where: { phone: PHONE } });
 });
 
 afterAll(async () => {

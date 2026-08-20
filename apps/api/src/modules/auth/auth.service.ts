@@ -1,9 +1,9 @@
 import type { PrismaClient } from "@prisma/client";
-import { PackRegistry } from "@sunumarket/config";
+import type { PackRegistry } from "@sunumarket/config";
 import type { MessagingProvider } from "../../lib/messaging.js";
 import { generateOtp, generateToken, hashSecret, sha256, verifySecret } from "../../lib/crypto.js";
 import type { VelocityRules } from "../fraud/velocity.js";
-import { FraudService } from "../fraud/fraud.service.js";
+import type { FraudService } from "../fraud/fraud.service.js";
 
 const OTP_TTL_MS = 5 * 60 * 1000;
 const OTP_MAX_ATTEMPTS = 5;
@@ -147,7 +147,7 @@ export class AuthService {
     const nextRow = await this.prisma.refreshToken.findUnique({ where: { tokenHash: sha256(next) } });
     await this.prisma.refreshToken.update({
       where: { id: row.id },
-      data: { revokedAt: new Date(), rotatedTo: nextRow?.id }
+      data: { revokedAt: new Date(), rotatedTo: nextRow?.id ?? null }
     });
     const user = await this.prisma.user.findUniqueOrThrow({ where: { id: row.userId } });
     return {

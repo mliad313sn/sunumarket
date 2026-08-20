@@ -47,7 +47,7 @@ d("phase 3 — RBAC matrix", () => {
           method: route.method,
           url: route.url,
           headers: { authorization: `Bearer ${tokenFor([role])}` },
-          payload: route.method === "POST" ? { pin: "1234" } : undefined
+          ...(route.method === "POST" ? { payload: { pin: "1234" } } : {})
         });
         if (allowed.includes(role)) {
           expect([200, 400, 404], `${role} ${route.url}`).not.toContain(403);

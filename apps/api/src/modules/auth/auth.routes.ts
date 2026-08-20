@@ -28,8 +28,9 @@ export function registerAuthRoutes(app: FastifyInstance, deps: AppDeps): void {
         details: err.upgradePath ? { upgrade_path: err.upgradePath } : undefined
       });
     }
-    if (typeof (err as { validation?: unknown }).validation !== "undefined" || err.name === "ZodError") {
-      return reply.code(400).send({ code: "validation", message: err.message });
+    const e = err as { validation?: unknown; name?: string; message?: string };
+    if (typeof e.validation !== "undefined" || e.name === "ZodError") {
+      return reply.code(400).send({ code: "validation", message: e.message ?? "invalid input" });
     }
     app.log.error(err);
     return reply.code(500).send({ code: "internal", message: "erreur interne" });

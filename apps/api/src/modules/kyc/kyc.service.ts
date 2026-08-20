@@ -1,5 +1,5 @@
 import type { PrismaClient } from "@prisma/client";
-import { PackRegistry } from "@sunumarket/config";
+import type { PackRegistry } from "@sunumarket/config";
 
 export class KycError extends Error {
   constructor(
