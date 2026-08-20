@@ -9,6 +9,9 @@ import { KycService } from "./modules/kyc/kyc.service.js";
 import { CatalogService } from "./modules/catalog/catalog.service.js";
 import { GeoApiService } from "./modules/geo/geo.service.js";
 import { OrdersService } from "./modules/orders/orders.service.js";
+import { MockPaymentProvider, MockPiSpiProvider } from "./modules/payments/mock-provider.js";
+import { ProviderRouter } from "./modules/payments/router.js";
+import { PaymentsService } from "./modules/payments/payments.service.js";
 
 export interface AppDeps {
   prisma: PrismaClient;
@@ -21,6 +24,11 @@ export interface AppDeps {
   catalog: CatalogService;
   geo: GeoApiService;
   orders: OrdersService;
+  router: ProviderRouter;
+  payments: PaymentsService;
+  mockAggA: MockPaymentProvider;
+  mockAggB: MockPaymentProvider;
+  mockPiSpi: MockPiSpiProvider;
 }
 
 export function buildDeps(overrides: Partial<AppDeps> = {}): AppDeps {
@@ -34,5 +42,11 @@ export function buildDeps(overrides: Partial<AppDeps> = {}): AppDeps {
   const catalog = overrides.catalog ?? new CatalogService(prisma, packs);
   const geo = overrides.geo ?? new GeoApiService(prisma);
   const orders = overrides.orders ?? new OrdersService(prisma, geo);
-  return { prisma, packs, messaging, velocity, fraud, auth, kyc, catalog, geo, orders };
+  const mockAggA = overrides.mockAggA ?? new MockPaymentProvider("AGG_A", process.env.MOCK_AGG_A_SECRET ?? "agg-a-secret");
+  const mockAggB = overrides.mockAggB ?? new MockPaymentProvider("AGG_B", process.env.MOCK_AGG_B_SECRET ?? "agg-b-secret");
+  const mockPiSpi = overrides.mockPiSpi ?? new MockPiSpiProvider(process.env.MOCK_PISPI_SECRET ?? "pispi-secret");
+  const router = overrides.router ?? new ProviderRouter(packs, [mockAggA, mockAggB, mockPiSpi]);
+  const payments =
+    overrides.payments ?? new PaymentsService(prisma, packs, router, orders, velocity, fraud, messaging);
+  return { prisma, packs, messaging, velocity, fraud, auth, kyc, catalog, geo, orders, router, payments, mockAggA, mockAggB, mockPiSpi };
 }

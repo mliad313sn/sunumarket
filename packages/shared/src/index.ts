@@ -9,3 +9,4 @@ export * from "./contracts/delivery.js";
 export * from "./contracts/payouts.js";
 export * from "./orders/state-machine.js";
 export * from "./geo/geo.js";
+export * from "./payments/circuit-breaker.js";
