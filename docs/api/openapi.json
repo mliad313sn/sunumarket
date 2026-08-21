@@ -399,6 +399,53 @@
             }
           }
         }
+      },
+      "delete": {
+        "operationId": "deleteMe",
+        "tags": [
+          "auth"
+        ],
+        "summary": "Anonymizing account delete (FR-25 privacy) — 409 while orders/COD/ledger balance are outstanding",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "anonymized": {
+                      "type": "boolean"
+                    }
+                  },
+                  "required": [
+                    "anonymized"
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        }
       }
     },
     "/kyc/upgrade": {

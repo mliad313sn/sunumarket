@@ -13,3 +13,4 @@ coverage/
 prisma/*.db
 minio-data/
 pg-data/
+.playwright-cli/

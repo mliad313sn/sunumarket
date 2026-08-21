@@ -17,4 +17,5 @@
 - Cross-seller cart, live GPS streaming, route optimization, buyer wallets,
   multi-currency checkout, iOS submission, ads, own map tiles,
   cross-border purchases, USSD full storefront, Wave-3 country launches (design-ready only), crypto/stablecoins.
-- Privacy note: /me delete must ANONYMIZE (fraud_events/audit are append-only, FKs SetNull is blocked by guard) — implement anonymizing delete in Phase 10/12 hardening.
+- ~~Privacy note: /me delete must ANONYMIZE (fraud_events/audit are append-only, FKs SetNull is blocked by guard) — implement anonymizing delete in Phase 10/12 hardening.~~
+  **DONE 2026-08-21:** `DELETE /me` implemented (`apps/api/src/modules/auth/privacy.service.ts`) — tombstones the user row, kills sessions/devices, scrubs KYC docs + saved pins (immediate FR-25 truncation) + order GPS snapshots + sms_outbox history, writes an audit_log record; 409-guarded on active orders, un-remitted rider COD, and non-zero ledger balances. 4-test suite `apps/api/test/privacy.delete.test.ts`. Legal/DPA review of the anonymization standard still pending (RTM §4.6).

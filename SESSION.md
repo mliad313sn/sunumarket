@@ -3,7 +3,8 @@
 > Updated every working session per Playbook rule 0.2. This file is the recovery point.
 
 - **Current phase:** PROGRAMME COMPLETE (all 13 phase exits met or explicitly descoped)
-- **Checkpoint:** Committee scope review completed and remediated (see docs/reports/COMMITTEE-REVIEW.md): COD seller-ledger credit, SMS outbox + delivered SMS + retry sweep, partner isolation (migration partner_contact_user), worker entrypoint + auto-complete, dispatch escalation, per-method KPI metrics. 189 tests green; invariants 8/8; clean-room verified.
+- **Checkpoint (2026-08-21, Prime Agent run):** BACKLOG privacy item closed — anonymizing `DELETE /me` (PrivacyService: PII tombstone, session/device kill, KYC-doc + pin + order-snapshot + sms_outbox scrub, audit_log record; 409 guards on active orders / rider COD / ledger balance). New 4-test suite `privacy.delete.test.ts` (stable ×2); OpenAPI contract + docs/api/openapi.json regenerated. Verification: lint + typecheck clean; DB suites 180 green (shared 51 · config 12 · web 6 · api 111); invariants 8/8 clean; E2E golden paths 13/13 green. Total 193 tests.
+- **Previous checkpoint:** Committee scope review completed and remediated (see docs/reports/COMMITTEE-REVIEW.md): COD seller-ledger credit, SMS outbox + delivered SMS + retry sweep, partner isolation (migration partner_contact_user), worker entrypoint + auto-complete, dispatch escalation, per-method KPI metrics. 189 tests green; invariants 8/8; clean-room verified.
 - **Exact next action:** (next session) real provider adapters vs sandboxes per contract-test protocol; Expo mobile app; staging deploy + soak (k6/ZAP/chaos/restore). See READY_TO_MARKET_REPORT §4 and BACKLOG.
 - **Branch:** `claude/execute-zip-instructions-2qmy1f`
 
