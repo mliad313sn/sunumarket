@@ -32,6 +32,15 @@ No Docker? Run local Postgres 16 + PostGIS and Redis, then `SUNU_NO_DOCKER=1 pnp
 | `packages/shared` | Domain core: Money, state machines, payment routing, ledger, reconciliation, geo fees, Zod contracts |
 | `packages/config` | Country Config Packs (versioned JSON + GeoJSON, Zod-validated, hot-loadable) |
 
+## AI tooling (Claude Code)
+
+- `CLAUDE.md` — prime context loaded automatically by Claude Code sessions (authorities, hard rules, gate).
+- `.claude/agents/prime.md` — **Prime Agent**: senior improvement engineer; primes on the
+  project authorities, executes one high-value improvement per run, and only reports done
+  when lint + typecheck + full test suite + `scripts/invariants.sql` are green.
+- `.claude/commands/prime.md` — `/prime` slash command: primes any session on project state
+  and proposes (or executes) the next highest-value improvement.
+
 ## Commands
 
 ```bash
