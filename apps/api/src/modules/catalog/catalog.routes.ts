@@ -33,6 +33,7 @@ export function registerCatalogRoutes(app: FastifyInstance, deps: AppDeps): void
   app.get("/me/shop", { preHandler: requireRoles("seller") }, async (req, reply) => {
     const shop = await deps.prisma.shop.findFirst({
       where: { sellerId: req.user.sub },
+      orderBy: { createdAt: "asc" }, // deterministic: the seller's first (primary) shop
       include: { products: { orderBy: { createdAt: "desc" } } }
     });
     if (!shop) return reply.code(404).send({ code: "no_shop", message: "aucune boutique pour ce compte" });

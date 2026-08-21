@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it } from "vitest";
-import { dictionaries } from "./i18n.js";
+import { dictionaries, JOB_STATUSES, ORDER_STATUSES, statusLabel } from "./i18n.js";
 import { drainEvents, funnel } from "./analytics.js";
 import { OfflineQueue } from "./offline-queue.js";
 import { isExpired, resend, secondsLeft, secondsOnScreen, startUssd } from "./ussd.js";
@@ -18,6 +18,23 @@ describe("phase 11 — i18n (FR/EN parity, no missing keys)", () => {
     expect(fr.ussd_body).toContain("confirmation sur votre téléphone"); // DC-2 microcopy
     expect(fr.payment_failed_balance).toContain("réservée 30 min"); // DC-3
     expect(fr.ussd_switch).toBeTruthy(); // DC-14 escape
+  });
+
+  it("every order + job status has a translated label in BOTH locales (pass 3, B2)", () => {
+    const { fr, en } = dictionaries();
+    for (const s of [...ORDER_STATUSES, ...JOB_STATUSES]) {
+      const key = `status_${s}` as keyof typeof fr;
+      expect(fr[key], `fr status_${s}`).toBeTruthy();
+      expect(en[key], `en status_${s}`).toBeTruthy();
+      // translated labels are human words, not raw enum values
+      expect(fr[key], `fr status_${s} untranslated`).not.toBe(s);
+    }
+  });
+
+  it("statusLabel translates known values and falls back to the raw string", () => {
+    expect(statusLabel("payment_pending")).toBeTruthy();
+    expect(statusLabel("payment_pending")).not.toBe("payment_pending");
+    expect(statusLabel("some_future_status")).toBe("some_future_status");
   });
 });
 

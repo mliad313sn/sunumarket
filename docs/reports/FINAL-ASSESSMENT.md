@@ -124,6 +124,27 @@ contract tests, staging soak, Expo app, media pipeline, DPA filings).
 
 ## Remediation verification (this round)
 
-- Full gate after fixes: lint + typecheck clean; DB suites green; e2e golden paths green;
-  invariants **10/10** (2 new checks); bundle budgets unchanged.
-- See `SESSION.md` checkpoint of 2026-08-21 (final assessment) for exact counts.
+Delivered in three sequenced passes, each behind the full gate:
+
+1. **Money core** (`11af538`) — C1–C6, C11, C12, C14, X2 + 11-test regression suite
+   `final.money.test.ts`.
+2. **Platform** (`8a51442`) — P1, X1, X4, O1, L1–L2, R1–R3, B1–B2 (API side), C7, K2
+   + 16-test regression suite `final.platform.test.ts`, two new migrations
+   (`ledger_transactions` immutability trigger, `worker_heartbeats`).
+3. **Frontend** — S1 (seller console in the web PWA: OTP login, create-shop, products/stock,
+   order inbox, balance + payout), B2/B3/B4 on the tracking page (cancel, dispute, rating,
+   translated statuses — ~90 new FR/EN i18n keys), R2 rider earnings line. Browser-walked
+   end-to-end with playwright-cli: golden path re-verified with fresh evidence (01→07), seller
+   space and tracking actions captured as `browser-evidence/08-seller-space.png` and
+   `09-tracking-actions.png`; dispute + rating submitted as a guest and confirmed as DB rows.
+   The walk surfaced and fixed three real defects (fixture-archive regex gap flooding the
+   marketplace, header overflow at 360px making the language toggle unreachable,
+   non-deterministic `GET /me/shop` shop selection).
+
+**Final gate on the finished tree:** lint + typecheck clean · **209 unit/DB tests**
+(shared 51 · config 12 · web 8 · api 138) · **e2e 13/13** · **invariants 10/10** zero rows ·
+bundles web 57.89 KB + rider 49.04 KB + admin ~47.7 KB gz (budget ≤300 KB) · audit 0 vulns.
+Contract additions during remediation: `GET /track/:token` now returns `order_id`, new public
+`GET /cities`, `GET /me/shop`, `POST /track/:token/cancel`, admin reconciliation
+ingest/run-match routes — all covered by tests and reflected where the OpenAPI document is
+generated from the shared contracts.

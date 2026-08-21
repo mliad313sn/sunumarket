@@ -14,10 +14,57 @@ export function formatMoney(m: MoneyWire | null): string {
 
 const BASE = "/api";
 
+/**
+ * Seller-session token store (S1). Guest flows stay tokenless — the header is
+ * only attached once a seller has logged in via OTP.
+ */
+const ACCESS_KEY = "auth_access";
+const REFRESH_KEY = "auth_refresh";
+
+export function getAccessToken(): string | null {
+  try {
+    return localStorage.getItem(ACCESS_KEY);
+  } catch {
+    return null;
+  }
+}
+
+export function setTokens(access: string, refresh: string): void {
+  localStorage.setItem(ACCESS_KEY, access);
+  localStorage.setItem(REFRESH_KEY, refresh);
+}
+
+export function clearTokens(): void {
+  localStorage.removeItem(ACCESS_KEY);
+  localStorage.removeItem(REFRESH_KEY);
+}
+
+/** Rotate the pair (also refreshes roles in the access token, e.g. after first shop). */
+export async function refreshTokens(): Promise<boolean> {
+  const refresh = localStorage.getItem(REFRESH_KEY);
+  if (!refresh) return false;
+  try {
+    const r = await api<{ access_token: string; refresh_token: string }>("/auth/refresh", {
+      method: "POST",
+      body: JSON.stringify({ refresh_token: refresh })
+    });
+    setTokens(r.access_token, r.refresh_token);
+    return true;
+  } catch {
+    clearTokens();
+    return false;
+  }
+}
+
 export async function api<T>(path: string, init?: RequestInit): Promise<T> {
+  const token = getAccessToken();
   const res = await fetch(`${BASE}${path}`, {
-    headers: { "content-type": "application/json" },
-    ...init
+    ...init,
+    headers: {
+      "content-type": "application/json",
+      ...(token ? { authorization: `Bearer ${token}` } : {}),
+      ...(init?.headers ?? {})
+    }
   });
   if (!res.ok) {
     const body = (await res.json().catch(() => ({}))) as { code?: string; message?: string };

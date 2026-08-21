@@ -158,6 +158,8 @@ d("phase 6 — tracking & inbox", () => {
     const track = await app.inject({ method: "GET", url: `/track/${tracking_token}` });
     expect(track.statusCode).toBe(200);
     expect(track.json().status).toBe("payment_pending");
+    // Pass-3 (B3): the tracking view exposes the order id for dispute/rating posts.
+    expect(track.json().order_id).toBe(id);
 
     const seller = await app.deps.prisma.user.findUniqueOrThrow({ where: { phone: "+2250701234505" } });
     const sellerToken = app.jwt.sign({ sub: seller.id, roles: seller.roles, tier: 1, device: "t" }, { expiresIn: "5m" });

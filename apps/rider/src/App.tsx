@@ -46,7 +46,10 @@ export function App() {
   const [activeJob, setActiveJob] = useState<string | null>(localStorage.getItem("active_job"));
   const [jobStatus, setJobStatus] = useState<string>(localStorage.getItem("active_job_status") ?? "accepted");
   const [otp, setOtp] = useState("");
-  const [cash, setCash] = useState<{ outstanding: { amount_minor: string } } | null>(null);
+  const [cash, setCash] = useState<{
+    outstanding: { amount_minor: string };
+    earned_total: { amount_minor: string } | null;
+  } | null>(null);
   const [online, setOnline] = useState(navigator.onLine);
   const [msg, setMsg] = useState<string | null>(null);
 
@@ -157,6 +160,11 @@ export function App() {
       {cash && (
         <div className="card">
           <div className="row">
+            <Icon name="route" />
+            <span>Gains (courses livrées) :</span>
+            <strong className="amount amount--ok">{fcfa(cash.earned_total)}</strong>
+          </div>
+          <div className="row" style={{ marginTop: 6 }}>
             <Icon name="cash" />
             <span>Espèces à remettre :</span>
             <strong className="amount amount--hi">{fcfa(cash.outstanding)}</strong>

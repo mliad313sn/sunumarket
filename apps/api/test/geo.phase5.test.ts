@@ -83,6 +83,13 @@ d("phase 5 — delivery points & fee engine", () => {
     const links = res.json();
     expect(links.google_maps).toContain("destination=14.69,-17.44");
     expect(links.waze).toContain("ll=14.69,-17.44");
+
+    // Pass-3 (seller space): public city reference list backs the create-shop wizard.
+    const cities = await app.inject({ method: "GET", url: "/cities" });
+    expect(cities.statusCode).toBe(200);
+    const list = cities.json().cities as Array<{ id: string; name: string; country: string }>;
+    expect(list.length).toBeGreaterThanOrEqual(3);
+    expect(list.some((c) => c.name === "Dakar" && c.country === "SN")).toBe(true);
   });
 
   it("retention job truncates overdue pins exactly once (FR-25)", async () => {

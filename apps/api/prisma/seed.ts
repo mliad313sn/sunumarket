@@ -142,13 +142,14 @@ async function main() {
 
   // Data hygiene (dev/test DBs): archive synthetic test-fixture products so the public
   // marketplace shows only real catalog items. Fixture titles carry a machine suffix
-  // ("<prefix>-<epoch-ms>-<seq>", e.g. "gp-p-1787279688466-56" or
-  // "race-test-1787279642653-0.8554") that no human title uses.
-  // Idempotent; products table is mutable (not append-only). Same rule as
-  // scripts/archive-test-fixtures.sql — keep them in sync.
+  // ("<prefix>-<epoch-ms>[rand]-<seq>", e.g. "gp-p-1787279688466-56",
+  // "race-test-1787279642653-0.8554" or "fm-p-1787337765612292-26" — the
+  // final.money suite appends up to 3 random digits, so 13-16 digits) that no
+  // human title uses. Idempotent; products table is mutable (not append-only).
+  // Same rule as scripts/archive-test-fixtures.sql — keep them in sync.
   const archived = await prisma.$executeRaw`
     UPDATE products SET status = 'archived'
-    WHERE status = 'active' AND title ~ '-[0-9]{13}-[0-9]+(\.[0-9]+)?$'`;
+    WHERE status = 'active' AND title ~ '-[0-9]{13,16}-[0-9]+(\.[0-9]+)?$'`;
   // Legacy fixture titles from suites before they switched to machine suffixes.
   const archivedLegacy = await prisma.$executeRaw`
     UPDATE products SET status = 'archived'

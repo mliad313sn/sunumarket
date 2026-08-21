@@ -56,6 +56,7 @@ export const orderSchema = z.object({
 export type Order = z.infer<typeof orderSchema>;
 
 export const trackingViewSchema = z.object({
+  order_id: uuidSchema,
   status: orderStatusSchema,
   delivery_status: z.string().nullable(),
   eta_hint: z.string().nullable(),

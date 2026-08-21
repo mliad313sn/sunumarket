@@ -45,6 +45,13 @@ export function registerGeoRoutes(app: FastifyInstance, deps: AppDeps): void {
     });
   });
 
+  // Pass-3 (seller space): public city list — the create-shop wizard needs a
+  // real city_id (createShopSchema) and country; read-only reference data.
+  app.get("/cities", async () => {
+    const rows = await deps.prisma.city.findMany({ orderBy: [{ country: "asc" }, { name: "asc" }] });
+    return { cities: rows.map((c) => ({ id: c.id, name: c.name, country: c.country })) };
+  });
+
   app.get("/nav-links", async (req) => {
     const q = z.object({ lat: z.coerce.number(), lng: z.coerce.number() }).parse(req.query);
     return deps.geo.navLinks({ lat: q.lat, lng: q.lng });

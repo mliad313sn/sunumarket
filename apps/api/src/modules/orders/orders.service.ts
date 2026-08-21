@@ -222,6 +222,9 @@ export class OrdersService {
     });
     if (!order) throw new OrderError("not_found", "lien de suivi invalide");
     return {
+      // Pass-3 (B3): the order id lets the tracking page open disputes/ratings
+      // (guest-authenticated by phone) — the token remains the read capability.
+      order_id: order.id,
       status: order.status,
       delivery_status: order.job?.status ?? null,
       eta_hint: null,

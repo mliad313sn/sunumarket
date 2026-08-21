@@ -117,6 +117,10 @@ h2 {
 .amount--hi {
   color: var(--hi);
 }
+/* Earnings (pass-3 R2): positive money distinct from the COD liability line. */
+.amount--ok {
+  color: var(--ok);
+}
 .cod-tag {
   display: inline-flex;
   align-items: center;

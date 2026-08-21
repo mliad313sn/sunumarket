@@ -85,3 +85,28 @@
   environment-descoped items.
 - **Public production launch:** **NO-GO until** real adapters pass contract tests, staging soak
   (k6+ZAP+chaos+restore) is green, and compliance items 1–4 are cleared for Senegal.
+
+## 8. Addendum — FINAL committee assessment (2026-08-21, docs/reports/FINAL-ASSESSMENT.md)
+
+A second, final committee round audited the finished product (post UI-elevation) with three
+independent code audits. It confirmed the domain core sound (DC-5, DC-8.1, immutability,
+state machines re-verified clean) and found the remaining defects at subsystem *edges*; all
+critical/high items were remediated in three gated passes:
+
+- **Money:** dispute-refund ordering (freeze held until refund succeeds), atomic + idempotent
+  refunds, payout advisory-lock (double-spend closed), honest rail-down (503, no fake
+  settlement), reconciliation ingest/match wired to admin HTTP routes, KYC/fraud/dispute/
+  recon-flag decisions now audited with actor, webhook freshness window,
+  `ledger_transactions` immutability trigger, invariants extended to **10 checks**.
+- **Platform:** per-partner webhook secrets, OTP/webhook rate limiting, production
+  dev-default-secret refusal, worker heartbeat + deep `/health`, privacy scrub extended
+  (shop PII, guest_phone, SMS bodies, rider GPS retention), incident re-dispatch, remittance
+  idempotency, order-confirmation SMS with tracking link, buyer cancel.
+- **Frontend:** minimal **seller console** in the web PWA (OTP login → shop → products →
+  orders → payouts), tracking-page cancel/dispute/rating with translated statuses, rider
+  earnings line. Browser-verified with fresh evidence (01→09).
+
+Final gate: **209 unit/DB tests + 13 e2e green**, invariants 10/10, bundles ≤58 KB gz.
+Deferred findings are recorded with rationale in BACKLOG.md ("Recorded by the FINAL committee
+assessment"). **Verdict: GO for beta on mocks reaffirmed — without financial-correctness
+reservations. Production gates in §7 unchanged.**

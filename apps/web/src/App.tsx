@@ -1,12 +1,23 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { api, formatMoney, type AttemptView, type CheckoutMethod, type MoneyWire, type ProductView } from "./lib/api.js";
+import {
+  api,
+  clearTokens,
+  formatMoney,
+  getAccessToken,
+  refreshTokens,
+  setTokens,
+  type AttemptView,
+  type CheckoutMethod,
+  type MoneyWire,
+  type ProductView
+} from "./lib/api.js";
 import { funnel, track } from "./lib/analytics.js";
-import { getLocale, setLocale, t } from "./lib/i18n.js";
+import { getLocale, setLocale, statusLabel, t } from "./lib/i18n.js";
 import { OfflineQueue } from "./lib/offline-queue.js";
 import { isExpired, resend as ussdResend, secondsLeft, secondsOnScreen, startUssd, type UssdState } from "./lib/ussd.js";
 import { BrandMark, Icon } from "./icons.js";
 
-/** Hash routes: #/ (marketplace) · #/p/<id> · #/checkout/<productId> · #/track/<token> */
+/** Hash routes: #/ (marketplace) · #/p/<id> · #/checkout/<productId> · #/track/<token> · #/seller */
 function useRoute(): string {
   const [route, setRoute] = useState(location.hash.slice(1) || "/");
   useEffect(() => {
@@ -80,6 +91,10 @@ export function App() {
           <BrandMark />
           <span>{t("app_title")}</span>
         </a>
+        <a className="tool-chip" href="#/seller">
+          <Icon name="store" size={13} />
+          {t("seller_space")}
+        </a>
         <div className="header-tools">
           <label className="tool-chip">
             <input
@@ -110,6 +125,7 @@ export function App() {
       {route.startsWith("/p/") && <ProductPage id={route.slice(3)} dataSaver={dataSaver} />}
       {route.startsWith("/checkout/") && <Checkout productId={route.slice(10)} online={online} />}
       {route.startsWith("/track/") && <Tracking token={route.slice(7)} />}
+      {route.startsWith("/seller") && <SellerSpace />}
     </main>
   );
 }
@@ -511,14 +527,88 @@ function Checkout({ productId, online }: { productId: string; online: boolean })
   );
 }
 
+interface TrackView {
+  order_id: string;
+  status: string;
+  delivery_status: string | null;
+  history: Array<{ status: string; at: string }>;
+}
+
+const DISPUTABLE = ["in_delivery", "delivered", "completed", "delivery_issue"];
+const RATABLE = ["delivered", "completed"];
+
 function Tracking({ token }: { token: string }) {
-  const [view, setView] = useState<{ status: string; delivery_status: string | null; history: Array<{ status: string; at: string }> } | null>(null);
+  const [view, setView] = useState<TrackView | null>(null);
+  const [confirmCancel, setConfirmCancel] = useState(false);
+  const [notice, setNotice] = useState<{ ok: boolean; text: string } | null>(null);
+  const [disputeOpen, setDisputeOpen] = useState(false);
+  const [disputeSent, setDisputeSent] = useState(false);
+  const [reason, setReason] = useState("");
+  const [phone, setPhone] = useState("");
+  const [stars, setStars] = useState(0);
+  const [comment, setComment] = useState("");
+  const [rated, setRated] = useState(localStorage.getItem(`rated_${token}`) === "1");
+
+  const load = useCallback(
+    () => api<TrackView>(`/track/${token}`).then(setView).catch(() => setView(null)),
+    [token]
+  );
   useEffect(() => {
-    const load = () => api<typeof view>(`/track/${token}`).then(setView).catch(() => setView(null));
     void load();
     const iv = setInterval(load, 10000);
     return () => clearInterval(iv);
-  }, [token]);
+  }, [load]);
+
+  const cancel = useCallback(async () => {
+    setConfirmCancel(false);
+    try {
+      await api(`/track/${token}/cancel`, { method: "POST", body: "{}" });
+      setNotice({ ok: true, text: t("cancel_success") });
+    } catch {
+      setNotice({ ok: false, text: t("cancel_failed") });
+    }
+    await load();
+  }, [token, load]);
+
+  const sendDispute = useCallback(async () => {
+    if (!view || reason.length < 5 || !phone) return;
+    try {
+      await api(`/orders/${view.order_id}/disputes`, {
+        method: "POST",
+        body: JSON.stringify({ reason, guest_phone: phone })
+      });
+      setDisputeSent(true);
+      setDisputeOpen(false);
+    } catch {
+      setNotice({ ok: false, text: t("dispute_failed") });
+    }
+  }, [view, reason, phone]);
+
+  const sendRating = useCallback(async () => {
+    if (!view || stars < 1 || !phone) return;
+    try {
+      await api(`/orders/${view.order_id}/ratings`, {
+        method: "POST",
+        body: JSON.stringify({
+          target: "seller",
+          stars,
+          guest_phone: phone,
+          ...(comment ? { comment } : {})
+        })
+      });
+      localStorage.setItem(`rated_${token}`, "1");
+      setRated(true);
+    } catch (e) {
+      // already_rated (409) still means "done" — persist and thank.
+      if ((e as { status?: number }).status === 409) {
+        localStorage.setItem(`rated_${token}`, "1");
+        setRated(true);
+      } else {
+        setNotice({ ok: false, text: t("rate_failed") });
+      }
+    }
+  }, [view, stars, comment, phone, token]);
+
   if (!view) return <p className="muted">{t("loading")}</p>;
   return (
     <div>
@@ -526,18 +616,532 @@ function Tracking({ token }: { token: string }) {
       <div className="notice-ok">
         <Icon name="check" size={18} />
         <span>
-          {t("order_status")}: {view.status}
-          {view.delivery_status ? ` · ${view.delivery_status}` : ""}
+          {t("order_status")}: {statusLabel(view.status)}
+          {view.delivery_status ? ` · ${statusLabel(view.delivery_status)}` : ""}
         </span>
       </div>
+      {notice && <div className={notice.ok ? "notice-ok" : "notice-warn"}>{notice.text}</div>}
+
+      {view.status === "payment_pending" &&
+        (confirmCancel ? (
+          <div className="card">
+            <p className="muted" style={{ margin: "0 0 0.6rem" }}>{t("cancel_confirm")}</p>
+            <div className="btn-row">
+              <button className="btn-ghost btn-danger" onClick={cancel}>
+                {t("cancel_yes")}
+              </button>
+              <button className="btn-ghost" onClick={() => setConfirmCancel(false)}>
+                {t("cancel_keep")}
+              </button>
+            </div>
+          </div>
+        ) : (
+          <button className="btn-ghost btn-danger" onClick={() => setConfirmCancel(true)}>
+            {t("cancel_order")}
+          </button>
+        ))}
+
+      {RATABLE.includes(view.status) &&
+        (rated ? (
+          <div className="notice-ok">
+            <Icon name="star" size={18} />
+            {t("rate_thanks")}
+          </div>
+        ) : (
+          <div className="card">
+            <h3 className="section-title" style={{ marginTop: 0 }}>{t("rate_title")}</h3>
+            <div className="star-row">
+              {[1, 2, 3, 4, 5].map((n) => (
+                <button
+                  key={n}
+                  className={n <= stars ? "star-btn star-btn--on" : "star-btn"}
+                  aria-label={`${n} ${t("rate_stars")}`}
+                  aria-pressed={n <= stars}
+                  onClick={() => setStars(n)}
+                >
+                  <Icon name="star" size={26} />
+                </button>
+              ))}
+            </div>
+            <label className="field">
+              <span className="field-label">{t("rate_comment_label")}</span>
+              <input className="input" value={comment} onChange={(e) => setComment(e.target.value)} />
+            </label>
+            <label className="field">
+              <span className="field-label">{t("dispute_phone_label")}</span>
+              <input className="input" type="tel" value={phone} onChange={(e) => setPhone(e.target.value)} />
+            </label>
+            <button className="btn" disabled={stars < 1 || !phone} onClick={sendRating}>
+              {t("rate_submit")}
+            </button>
+          </div>
+        ))}
+
+      {DISPUTABLE.includes(view.status) &&
+        (disputeSent ? (
+          <div className="notice-ok">
+            <Icon name="check" size={18} />
+            {t("dispute_success")}
+          </div>
+        ) : disputeOpen ? (
+          <div className="card">
+            <h3 className="section-title" style={{ marginTop: 0 }}>{t("dispute_open")}</h3>
+            <label className="field">
+              <span className="field-label">{t("dispute_reason_label")}</span>
+              <textarea
+                className="input"
+                rows={3}
+                value={reason}
+                onChange={(e) => setReason(e.target.value)}
+              />
+            </label>
+            <label className="field">
+              <span className="field-label">{t("dispute_phone_label")}</span>
+              <input className="input" type="tel" value={phone} onChange={(e) => setPhone(e.target.value)} />
+            </label>
+            <button className="btn" disabled={reason.length < 5 || !phone} onClick={sendDispute}>
+              {t("dispute_submit")}
+            </button>
+          </div>
+        ) : (
+          <button className="btn-ghost" onClick={() => setDisputeOpen(true)}>
+            {t("dispute_open")}
+          </button>
+        ))}
+
       <ol className="timeline">
         {view.history.map((h, i) => (
           <li key={i}>
-            {h.status}
+            {statusLabel(h.status)}
             <time>{new Date(h.at).toLocaleTimeString()}</time>
           </li>
         ))}
       </ol>
+    </div>
+  );
+}
+
+/* ---------------- Seller space (S1) ---------------- */
+
+const LAUNCH_COUNTRIES = ["SN", "CI", "BF", "ML", "BJ", "TG", "NE"];
+
+/** Stable per-browser device hash for OTP device binding (DC-8.3). */
+function deviceHash(): string {
+  let h = localStorage.getItem("device_hash");
+  if (!h) {
+    h = crypto.randomUUID();
+    localStorage.setItem("device_hash", h);
+  }
+  return h;
+}
+
+interface SellerProduct {
+  id: string;
+  title: string;
+  price: MoneyWire;
+  stock: number;
+  status: string;
+}
+
+interface SellerShop {
+  id: string;
+  name: string;
+  slug: string;
+  verified: boolean;
+  country: string;
+  enabled_methods: string[];
+  products: SellerProduct[];
+}
+
+interface SellerOrderRow {
+  id: string;
+  status: string;
+  total: MoneyWire;
+  created_at: string;
+}
+
+function productStatusLabel(s: string): string {
+  if (s === "active") return t("pstatus_active");
+  if (s === "draft") return t("pstatus_draft");
+  if (s === "archived") return t("pstatus_archived");
+  return s;
+}
+
+function SellerSpace() {
+  const [stage, setStage] = useState<"login" | "code" | "loading" | "create" | "dash">(
+    getAccessToken() ? "loading" : "login"
+  );
+  const [phone, setPhone] = useState("");
+  const [country, setCountry] = useState("SN");
+  const [code, setCode] = useState("");
+  const [error, setError] = useState<string | null>(null);
+  const [info, setInfo] = useState<string | null>(null);
+  const [shop, setShop] = useState<SellerShop | null>(null);
+
+  const load = useCallback(async () => {
+    setStage("loading");
+    setError(null);
+    try {
+      const s = await api<SellerShop>("/me/shop");
+      setShop(s);
+      setStage("dash");
+    } catch (e) {
+      const err = e as Error & { status?: number };
+      if (err.status === 404 || err.status === 403) {
+        setStage("create"); // logged in, no shop (or no seller role yet)
+      } else {
+        clearTokens();
+        setStage("login");
+        if (err.status !== 401) setError(err.message);
+      }
+    }
+  }, []);
+
+  useEffect(() => {
+    if (getAccessToken()) void load();
+  }, [load]);
+
+  const requestOtp = useCallback(async () => {
+    setError(null);
+    try {
+      await api("/auth/otp", {
+        method: "POST",
+        body: JSON.stringify({ phone, country, device_hash: deviceHash() })
+      });
+      setInfo(t("otp_sent"));
+      setStage("code");
+    } catch (e) {
+      setError((e as Error).message);
+    }
+  }, [phone, country]);
+
+  const verifyOtp = useCallback(async () => {
+    setError(null);
+    try {
+      const r = await api<{ access_token: string; refresh_token: string }>("/auth/verify", {
+        method: "POST",
+        body: JSON.stringify({ phone, code, device_hash: deviceHash() })
+      });
+      setTokens(r.access_token, r.refresh_token);
+      setInfo(null);
+      await load();
+    } catch (e) {
+      setError((e as Error).message);
+    }
+  }, [phone, code, load]);
+
+  const logout = useCallback(() => {
+    clearTokens();
+    setShop(null);
+    setStage("login");
+  }, []);
+
+  if (stage === "loading") return <p className="muted">{t("loading")}</p>;
+
+  if (stage === "login" || stage === "code") {
+    return (
+      <div>
+        <h2>{t("seller_login_title")}</h2>
+        <p className="muted" style={{ fontSize: "0.9375rem" }}>{t("seller_login_hint")}</p>
+        {info && <div className="notice-ok">{info}</div>}
+        {error && <div className="notice-warn">{error}</div>}
+        {stage === "login" ? (
+          <>
+            <label className="field">
+              <span className="field-label">{t("phone_label")}</span>
+              <input className="input" type="tel" value={phone} onChange={(e) => setPhone(e.target.value)} />
+            </label>
+            <label className="field">
+              <span className="field-label">{t("country_label")}</span>
+              <select className="input" value={country} onChange={(e) => setCountry(e.target.value)}>
+                {LAUNCH_COUNTRIES.map((c) => (
+                  <option key={c} value={c}>
+                    {c}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <button className="btn" disabled={!phone} onClick={requestOtp}>
+              {t("otp_request")}
+            </button>
+          </>
+        ) : (
+          <>
+            <label className="field">
+              <span className="field-label">{t("otp_code_label")}</span>
+              <input
+                className="input num"
+                inputMode="numeric"
+                maxLength={6}
+                value={code}
+                onChange={(e) => setCode(e.target.value)}
+              />
+            </label>
+            <button className="btn" disabled={code.length !== 6} onClick={verifyOtp}>
+              {t("otp_verify")}
+            </button>
+            <div className="gap" />
+            <button className="btn-ghost" onClick={requestOtp}>
+              {t("ussd_resend")}
+            </button>
+          </>
+        )}
+      </div>
+    );
+  }
+
+  if (stage === "create") return <CreateShop onDone={load} onLogout={logout} />;
+
+  return shop ? <SellerDashboard shop={shop} onReload={load} onLogout={logout} /> : null;
+}
+
+function CreateShop({ onDone, onLogout }: { onDone: () => Promise<void>; onLogout: () => void }) {
+  const [cities, setCities] = useState<Array<{ id: string; name: string; country: string }>>([]);
+  const [name, setName] = useState("");
+  const [cityId, setCityId] = useState("");
+  const [whatsapp, setWhatsapp] = useState("");
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    api<{ cities: Array<{ id: string; name: string; country: string }> }>("/cities")
+      .then((r) => {
+        setCities(r.cities);
+        if (r.cities[0]) setCityId(r.cities[0].id);
+      })
+      .catch(() => setCities([]));
+  }, []);
+
+  const submit = useCallback(async () => {
+    const city = cities.find((c) => c.id === cityId);
+    if (!city || name.length < 2) return;
+    setError(null);
+    try {
+      await api("/shops", {
+        method: "POST",
+        body: JSON.stringify({
+          name,
+          country: city.country,
+          city_id: city.id,
+          ...(whatsapp ? { whatsapp_phone: whatsapp } : {})
+        })
+      });
+      await refreshTokens(); // pick up the freshly granted seller role
+      await onDone();
+    } catch (e) {
+      setError((e as Error).message);
+    }
+  }, [cities, cityId, name, whatsapp, onDone]);
+
+  return (
+    <div>
+      <h2>{t("create_shop_title")}</h2>
+      {error && <div className="notice-warn">{error}</div>}
+      <label className="field">
+        <span className="field-label">{t("shop_name_label")}</span>
+        <input className="input" value={name} onChange={(e) => setName(e.target.value)} />
+      </label>
+      <label className="field">
+        <span className="field-label">{t("shop_city_label")}</span>
+        <select className="input" value={cityId} onChange={(e) => setCityId(e.target.value)}>
+          {cities.map((c) => (
+            <option key={c.id} value={c.id}>
+              {c.name} ({c.country})
+            </option>
+          ))}
+        </select>
+      </label>
+      <label className="field">
+        <span className="field-label">{t("shop_whatsapp_label")}</span>
+        <input className="input" type="tel" value={whatsapp} onChange={(e) => setWhatsapp(e.target.value)} />
+      </label>
+      <button className="btn" disabled={name.length < 2 || !cityId} onClick={submit}>
+        {t("shop_create_submit")}
+      </button>
+      <div className="gap" />
+      <button className="btn-ghost" onClick={onLogout}>
+        {t("logout")}
+      </button>
+    </div>
+  );
+}
+
+function SellerDashboard({
+  shop,
+  onReload,
+  onLogout
+}: {
+  shop: SellerShop;
+  onReload: () => Promise<void>;
+  onLogout: () => void;
+}) {
+  const [orders, setOrders] = useState<SellerOrderRow[] | null>(null);
+  const [balance, setBalance] = useState<{ available: MoneyWire } | null>(null);
+  const [title, setTitle] = useState("");
+  const [priceFcfa, setPriceFcfa] = useState("");
+  const [stock, setStock] = useState("");
+  const [payAmount, setPayAmount] = useState("");
+  const [pin, setPin] = useState("");
+  const [notice, setNotice] = useState<{ ok: boolean; text: string } | null>(null);
+
+  const authGuard = useCallback(
+    (e: unknown) => {
+      if ((e as { status?: number }).status === 401) {
+        clearTokens();
+        void onReload(); // lands back on the login stage
+        return true;
+      }
+      return false;
+    },
+    [onReload]
+  );
+
+  const loadBalance = useCallback(() => {
+    api<{ available: MoneyWire }>("/balance").then(setBalance).catch((e) => {
+      if (!authGuard(e)) setBalance(null);
+    });
+  }, [authGuard]);
+
+  useEffect(() => {
+    api<SellerOrderRow[]>(`/shops/${shop.id}/orders`).then(setOrders).catch((e) => {
+      if (!authGuard(e)) setOrders([]);
+    });
+    loadBalance();
+  }, [shop.id, loadBalance, authGuard]);
+
+  const addProduct = useCallback(async () => {
+    if (title.length < 2 || !/^\d+$/.test(priceFcfa) || !/^\d+$/.test(stock)) return;
+    setNotice(null);
+    try {
+      // XOF has no minor subdivision here: displayed FCFA == amount_minor
+      // (formatMoney renders amount_minor 1:1) — the inverse is the identity.
+      await api(`/shops/${shop.id}/products`, {
+        method: "POST",
+        body: JSON.stringify({
+          title,
+          price: { amount_minor: BigInt(priceFcfa).toString(), currency: "XOF" },
+          stock: Number(stock),
+          image_keys: []
+        })
+      });
+      setTitle("");
+      setPriceFcfa("");
+      setStock("");
+      await onReload();
+    } catch (e) {
+      if (!authGuard(e)) setNotice({ ok: false, text: (e as Error).message });
+    }
+  }, [shop.id, title, priceFcfa, stock, onReload, authGuard]);
+
+  const requestPayout = useCallback(async () => {
+    if (!/^\d+$/.test(payAmount)) return;
+    setNotice(null);
+    try {
+      await api("/payouts", {
+        method: "POST",
+        body: JSON.stringify({
+          amount: { amount_minor: BigInt(payAmount).toString(), currency: "XOF" },
+          ...(pin ? { payout_pin: pin } : {}),
+          idempotency_key: crypto.randomUUID()
+        })
+      });
+      setNotice({ ok: true, text: t("payout_success") });
+      setPayAmount("");
+      loadBalance();
+    } catch (e) {
+      if (authGuard(e)) return;
+      const code = (e as { code?: string }).code;
+      if (code === "insufficient_balance") setNotice({ ok: false, text: t("payout_insufficient") });
+      else if (code === "rail_down") setNotice({ ok: false, text: t("payout_rail_down") });
+      else if (code === "pin_required") setNotice({ ok: false, text: t("payout_pin_required") });
+      else setNotice({ ok: false, text: (e as Error).message });
+    }
+  }, [payAmount, pin, loadBalance, authGuard]);
+
+  return (
+    <div>
+      <section className="trust">
+        <div className="trust-shop">
+          <span>{shop.name}</span>
+          {shop.verified && (
+            <span className="trust-badge">
+              <Icon name="shield" size={16} />
+              {t("verified_seller")}
+            </span>
+          )}
+        </div>
+        <div className="trust-stat">{t("seller_space")}</div>
+      </section>
+      {notice && <div className={notice.ok ? "notice-ok" : "notice-warn"}>{notice.text}</div>}
+
+      <h3 className="section-title">{t("balance_title")}</h3>
+      <div className="card">
+        <div className="product-meta" style={{ marginTop: 0 }}>
+          <span>{t("balance_available")}</span>
+          <strong className="price">{formatMoney(balance?.available ?? null)}</strong>
+        </div>
+        <div className="gap" />
+        <label className="field">
+          <span className="field-label">{t("payout_amount_label")}</span>
+          <input className="input num" inputMode="numeric" value={payAmount} onChange={(e) => setPayAmount(e.target.value)} />
+        </label>
+        <label className="field">
+          <span className="field-label">{t("payout_pin_label")}</span>
+          <input className="input num" type="password" inputMode="numeric" maxLength={6} value={pin} onChange={(e) => setPin(e.target.value)} />
+        </label>
+        <button className="btn-ghost" disabled={!/^\d+$/.test(payAmount)} onClick={requestPayout}>
+          {t("payout_request")}
+        </button>
+      </div>
+
+      <h3 className="section-title">{t("my_products")}</h3>
+      <div className="card">
+        {shop.products.length === 0 && <p className="muted">{t("no_products")}</p>}
+        {shop.products.map((p) => (
+          <div key={p.id} className="list-row">
+            <span className="list-main">{p.title}</span>
+            <span className="price">{formatMoney(p.price)}</span>
+            <span className="chip-stock num">{p.stock}</span>
+            <span className={p.status === "active" ? "chip-stock" : "chip-stock chip-stock--muted"}>
+              {productStatusLabel(p.status)}
+            </span>
+          </div>
+        ))}
+      </div>
+      <div className="card">
+        <h3 className="section-title" style={{ marginTop: 0 }}>{t("add_product")}</h3>
+        <label className="field">
+          <span className="field-label">{t("product_title_label")}</span>
+          <input className="input" value={title} onChange={(e) => setTitle(e.target.value)} />
+        </label>
+        <label className="field">
+          <span className="field-label">{t("product_price_label")}</span>
+          <input className="input num" inputMode="numeric" value={priceFcfa} onChange={(e) => setPriceFcfa(e.target.value)} />
+        </label>
+        <label className="field">
+          <span className="field-label">{t("product_stock_label")}</span>
+          <input className="input num" inputMode="numeric" value={stock} onChange={(e) => setStock(e.target.value)} />
+        </label>
+        <button className="btn" disabled={title.length < 2 || !/^\d+$/.test(priceFcfa) || !/^\d+$/.test(stock)} onClick={addProduct}>
+          {t("product_submit")}
+        </button>
+      </div>
+
+      <h3 className="section-title">{t("orders_inbox")}</h3>
+      <div className="card">
+        {orders === null && <p className="muted">{t("loading")}</p>}
+        {orders?.length === 0 && <p className="muted">{t("no_orders")}</p>}
+        {orders?.map((o) => (
+          <div key={o.id} className="list-row">
+            <span className="list-main num">#{o.id.slice(0, 8)}</span>
+            <span className="chip-stock">{statusLabel(o.status)}</span>
+            <span className="price">{formatMoney(o.total)}</span>
+          </div>
+        ))}
+      </div>
+
+      <button className="btn-ghost" onClick={onLogout}>
+        {t("logout")}
+      </button>
     </div>
   );
 }

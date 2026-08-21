@@ -171,7 +171,9 @@ d("finding C — partner data isolation", () => {
     const opsToken = app.jwt.sign({ sub: ops.id, roles: ["partner"], tier: 1, device: "t" }, { expiresIn: "5m" });
     const res = await app.inject({ method: "GET", url: "/partner/jobs", headers: { authorization: `Bearer ${opsToken}` } });
     expect(res.statusCode).toBe(200);
-    const partner = await app.deps.prisma.partner.findFirstOrThrow();
+    // deterministic: THE partner linked to ops (an unfiltered findFirst is
+    // heap-order dependent once other suites have created partner rows)
+    const partner = await app.deps.prisma.partner.findFirstOrThrow({ where: { contactUserId: ops.id } });
     for (const job of res.json() as Array<{ partner_id: string }>) {
       expect(job.partner_id).toBe(partner.id);
     }
