@@ -1,0 +1,231 @@
+/**
+ * SunuMarket rider PWA — token stylesheet.
+ * High-contrast dark theme (FR-45): built for sunlight, gloves, motion.
+ * - Accent: high-vis yellow (safety-vest identity), primary actions only.
+ * - Every text/surface pair ≥ 4.5:1; primary action 13:1.
+ * - Big touch targets (min 48px), bold weights, tabular amounts.
+ * - Shape scale: cards 12px, controls 10px. Elevation = hairline borders only.
+ * - Motion: press feedback only; disabled under prefers-reduced-motion.
+ */
+
+:root {
+  --bg: #101210;
+  --surface: #1b1e1b;
+  --line: #343834;
+  --line-strong: #4c524c;
+  --text: #f2f4f0; /* 15.4:1 on bg */
+  --text-2: #b4bab2; /* 7.6:1 on surface */
+  --hi: #ffd400; /* high-vis accent — 13:1 as bg with ink text */
+  --hi-ink: #161200;
+  --ok: #6fdca6;
+  --warn-line: #ffd400;
+  --red: #ff8a80;
+
+  --r-card: 12px;
+  --r-ctl: 10px;
+  --font: system-ui, -apple-system, "Segoe UI", Roboto, "Noto Sans", sans-serif;
+  --speed: 160ms;
+}
+
+* {
+  box-sizing: border-box;
+}
+html {
+  background: var(--bg);
+}
+body {
+  margin: 0;
+  font-family: var(--font);
+  color: var(--text);
+  font-size: 1rem;
+  line-height: 1.45;
+  -webkit-font-smoothing: antialiased;
+}
+::selection {
+  background: var(--hi);
+  color: var(--hi-ink);
+}
+input {
+  caret-color: var(--hi);
+}
+:focus-visible {
+  outline: 2px solid var(--hi);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+.page {
+  max-width: 480px;
+  margin: 0 auto;
+  min-height: 100dvh;
+  padding: 0 0.875rem 2rem;
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.75rem 0 0.625rem;
+  margin-bottom: 0.5rem;
+  border-bottom: 1px solid var(--line);
+}
+.header h1 {
+  font-size: 1.125rem;
+  letter-spacing: -0.01em;
+  margin: 0;
+}
+.header svg {
+  display: block;
+}
+
+h2 {
+  font-size: 0.875rem;
+  font-weight: 700;
+  color: var(--text-2);
+  margin: 1rem 0 0.5rem;
+}
+
+.muted {
+  color: var(--text-2);
+  font-size: 0.875rem;
+}
+.num {
+  font-variant-numeric: tabular-nums;
+}
+
+.card {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--r-card);
+  padding: 0.875rem;
+  margin-bottom: 0.625rem;
+}
+.card--warn {
+  border-color: var(--warn-line);
+}
+
+.row {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+.amount {
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.01em;
+}
+.amount--hi {
+  color: var(--hi);
+}
+.cod-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  color: var(--hi);
+  font-weight: 700;
+  font-size: 0.875rem;
+  font-variant-numeric: tabular-nums;
+}
+
+/* Buttons: primary = high-vis, secondary = outlined */
+.btn,
+.btn2 {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  width: 100%;
+  min-height: 48px;
+  border-radius: var(--r-ctl);
+  font-family: inherit;
+  font-size: 1.05rem;
+  font-weight: 700;
+  cursor: pointer;
+  padding: 0.8rem 1rem;
+  transition: transform 90ms ease, background var(--speed) ease, border-color var(--speed) ease;
+}
+.btn {
+  background: var(--hi);
+  color: var(--hi-ink);
+  border: 0;
+}
+.btn:hover {
+  background: #ffdf3d;
+}
+.btn:active {
+  transform: scale(0.98);
+}
+.btn2 {
+  background: var(--surface);
+  color: var(--text);
+  border: 1px solid var(--line-strong);
+  font-weight: 600;
+  font-size: 1rem;
+}
+.btn2:hover {
+  border-color: var(--text-2);
+}
+.btn2:active {
+  transform: scale(0.98);
+}
+
+.input {
+  width: 100%;
+  min-height: 48px;
+  padding: 0.7rem 0.8rem;
+  border-radius: var(--r-ctl);
+  border: 1px solid var(--line-strong);
+  background: #141614;
+  color: var(--text);
+  font-size: 1rem;
+  font-family: inherit;
+  font-variant-numeric: tabular-nums;
+}
+.input::placeholder {
+  color: var(--text-2);
+}
+.input:focus {
+  outline: none;
+  border-color: var(--hi);
+  box-shadow: 0 0 0 3px rgba(255, 212, 0, 0.18);
+}
+
+.stack {
+  display: grid;
+  gap: 0.5rem;
+  margin-top: 0.625rem;
+}
+.gap {
+  height: 0.5rem;
+}
+
+/* Job progress steps (accepted → picked_up → en_route → arrived) */
+.steps {
+  display: flex;
+  gap: 0.3rem;
+  margin: 0.5rem 0 0.25rem;
+}
+.steps span {
+  flex: 1;
+  height: 5px;
+  border-radius: 999px;
+  background: var(--line);
+}
+.steps span.done {
+  background: var(--hi);
+}
+.status-line {
+  color: var(--text-2);
+  font-size: 0.875rem;
+}
+.status-line strong {
+  color: var(--text);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .btn,
+  .btn2,
+  .input {
+    transition: none;
+  }
+}

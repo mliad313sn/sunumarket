@@ -5,19 +5,38 @@ import { useCallback, useEffect, useState } from "react";
  * reconciliation / disputes), config panels (method toggle, route flip), audit.
  */
 
-const S = {
-  page: { fontFamily: "system-ui, sans-serif", maxWidth: 900, margin: "0 auto", padding: "1rem" } as const,
-  nav: { display: "flex", gap: 8, flexWrap: "wrap" as const, marginBottom: 12 } as const,
-  tab: (a: boolean) => ({ padding: "6px 12px", borderRadius: 6, border: "1px solid #ccc", background: a ? "#0b7d4f" : "#fff", color: a ? "#fff" : "#333", cursor: "pointer" }) as const,
-  card: { border: "1px solid #e5e5e5", borderRadius: 8, padding: "0.8rem", marginBottom: "0.6rem" } as const,
-  table: { width: "100%", borderCollapse: "collapse" as const, fontSize: "0.85rem" } as const,
-  th: { textAlign: "left" as const, borderBottom: "2px solid #ddd", padding: 6 } as const,
-  td: { borderBottom: "1px solid #eee", padding: 6 } as const,
-  btn: { background: "#0b7d4f", color: "#fff", border: 0, borderRadius: 6, padding: "4px 10px", cursor: "pointer" } as const,
-  input: { padding: "0.5rem", borderRadius: 6, border: "1px solid #ccc" } as const
+type Tab = "dashboard" | "search" | "kyc" | "fraud" | "reconciliation" | "disputes" | "config" | "audit";
+
+/** Display labels (console is FR-first; tab keys stay stable identifiers). */
+const TAB_LABELS: Record<Tab, string> = {
+  dashboard: "Tableau de bord",
+  search: "Recherche",
+  kyc: "KYC",
+  fraud: "Fraude",
+  reconciliation: "Réconciliation",
+  disputes: "Litiges",
+  config: "Configuration",
+  audit: "Audit"
 };
 
-type Tab = "dashboard" | "search" | "kyc" | "fraud" | "reconciliation" | "disputes" | "config" | "audit";
+function BrandMark({ size = 24 }: { size?: number }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 32 32" aria-hidden="true">
+      <rect width="32" height="32" rx="8" fill="#0b7d4f" />
+      <text
+        x="16"
+        y="22.5"
+        textAnchor="middle"
+        fontFamily="system-ui, sans-serif"
+        fontSize="18"
+        fontWeight="700"
+        fill="#fff"
+      >
+        S
+      </text>
+    </svg>
+  );
+}
 
 export function App() {
   const [token, setToken] = useState(localStorage.getItem("admin_token") ?? "");
@@ -65,32 +84,40 @@ export function App() {
 
   if (!token) {
     return (
-      <main style={S.page}>
-        <h1>SunuMarket — Console Admin</h1>
-        <input style={S.input} placeholder="jeton admin…" value={token} onChange={(e) => setToken(e.target.value)} />
-        <button style={{ ...S.btn, marginLeft: 8 }} onClick={() => localStorage.setItem("admin_token", token)}>
-          Entrer
-        </button>
+      <main className="page">
+        <header className="header">
+          <BrandMark />
+          <h1>SunuMarket — Console Admin</h1>
+        </header>
+        <div className="toolbar">
+          <input className="input" placeholder="jeton admin…" value={token} onChange={(e) => setToken(e.target.value)} />
+          <button className="btn" onClick={() => localStorage.setItem("admin_token", token)}>
+            Entrer
+          </button>
+        </div>
       </main>
     );
   }
 
   return (
-    <main style={S.page}>
-      <h1 style={{ fontSize: "1.3rem" }}>SunuMarket — Console Admin</h1>
-      <nav style={S.nav}>
-        {(["dashboard", "search", "kyc", "fraud", "reconciliation", "disputes", "config", "audit"] as Tab[]).map((x) => (
-          <button key={x} style={S.tab(tab === x)} onClick={() => setTab(x)}>
-            {x}
+    <main className="page">
+      <header className="header">
+        <BrandMark />
+        <h1>SunuMarket — Console Admin</h1>
+      </header>
+      <nav className="nav">
+        {(Object.keys(TAB_LABELS) as Tab[]).map((x) => (
+          <button key={x} className="tab" aria-current={tab === x} onClick={() => setTab(x)}>
+            {TAB_LABELS[x]}
           </button>
         ))}
       </nav>
-      {msg && <div style={{ ...S.card, borderColor: "#f0d264", background: "#fff8e1" }}>{msg}</div>}
+      {msg && <div className="notice-warn">{msg}</div>}
       {tab === "search" && (
-        <div style={{ marginBottom: 8 }}>
-          <input style={S.input} placeholder="téléphone…" value={q} onChange={(e) => setQ(e.target.value)} />
-          <button style={{ ...S.btn, marginLeft: 8 }} onClick={() => load("search")}>
-            🔍 Rechercher
+        <div className="toolbar">
+          <input className="input" placeholder="téléphone…" value={q} onChange={(e) => setQ(e.target.value)} />
+          <button className="btn" onClick={() => load("search")}>
+            Rechercher
           </button>
         </div>
       )}
@@ -106,11 +133,7 @@ export function App() {
           void load("disputes");
         }} />
       )}
-      {tab !== "reconciliation" && tab !== "disputes" && (
-        <pre style={{ ...S.card, overflow: "auto", fontSize: "0.75rem", maxHeight: 480 }}>
-          {JSON.stringify(data, null, 2)}
-        </pre>
-      )}
+      {tab !== "reconciliation" && tab !== "disputes" && <pre className="json">{JSON.stringify(data, null, 2)}</pre>}
     </main>
   );
 }
@@ -124,27 +147,29 @@ interface ReconFlag {
 
 function ReconTable({ flags, onResolve }: { flags: ReconFlag[]; onResolve: (id: string) => void }) {
   return (
-    <table style={S.table}>
+    <table className="table">
       <thead>
         <tr>
-          <th style={S.th}>Type</th>
-          <th style={S.th}>Référence</th>
-          <th style={S.th}>Montant</th>
-          <th style={S.th}>Ancienneté</th>
-          <th style={S.th}></th>
+          <th>Type</th>
+          <th>Référence</th>
+          <th>Montant</th>
+          <th>Ancienneté</th>
+          <th></th>
         </tr>
       </thead>
       <tbody>
         {flags.map((f) => (
           <tr key={f.id}>
-            <td style={S.td}>{f.kind}</td>
-            <td style={S.td}>{f.settlement_line?.provider_ref ?? "—"}</td>
-            <td style={S.td}>{f.settlement_line?.amount_minor ?? "—"}</td>
-            <td style={S.td}>{f.aging_bucket}</td>
-            <td style={S.td}>
-              <button style={S.btn} onClick={() => onResolve(f.id)}>
-                Résoudre
-              </button>
+            <td>{f.kind}</td>
+            <td>{f.settlement_line?.provider_ref ?? "—"}</td>
+            <td>{f.settlement_line?.amount_minor ?? "—"}</td>
+            <td>{f.aging_bucket}</td>
+            <td>
+              <div className="actions">
+                <button className="btn" onClick={() => onResolve(f.id)}>
+                  Résoudre
+                </button>
+              </div>
             </td>
           </tr>
         ))}
@@ -161,26 +186,28 @@ interface Dispute {
 
 function DisputeTable({ disputes, onResolve }: { disputes: Dispute[]; onResolve: (id: string, r: "refund" | "reject") => void }) {
   return (
-    <table style={S.table}>
+    <table className="table">
       <thead>
         <tr>
-          <th style={S.th}>Litige</th>
-          <th style={S.th}>Commande</th>
-          <th style={S.th}></th>
+          <th>Litige</th>
+          <th>Commande</th>
+          <th></th>
         </tr>
       </thead>
       <tbody>
         {disputes.map((d) => (
           <tr key={d.id}>
-            <td style={S.td}>{d.reason}</td>
-            <td style={S.td}>{d.order.id.slice(0, 8)}…</td>
-            <td style={S.td}>
-              <button style={S.btn} onClick={() => onResolve(d.id, "refund")}>
-                Rembourser
-              </button>{" "}
-              <button style={{ ...S.btn, background: "#a33" }} onClick={() => onResolve(d.id, "reject")}>
-                Rejeter
-              </button>
+            <td>{d.reason}</td>
+            <td>{d.order.id.slice(0, 8)}…</td>
+            <td>
+              <div className="actions">
+                <button className="btn" onClick={() => onResolve(d.id, "refund")}>
+                  Rembourser
+                </button>
+                <button className="btn btn--danger" onClick={() => onResolve(d.id, "reject")}>
+                  Rejeter
+                </button>
+              </div>
             </td>
           </tr>
         ))}
