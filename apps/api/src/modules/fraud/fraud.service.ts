@@ -26,7 +26,15 @@ export class FraudService {
     });
   }
 
-  async review(id: string, status: "cleared" | "actioned") {
-    return this.prisma.fraudEvent.update({ where: { id }, data: { reviewStatus: status } });
+  async review(id: string, status: "cleared" | "actioned", actorId: string | null = null) {
+    const updated = await this.prisma.fraudEvent.update({ where: { id }, data: { reviewStatus: status } });
+    await this.prisma.auditLog.create({
+      data: {
+        actorId,
+        action: "fraud:review",
+        detail: { event_id: id, kind: updated.kind, subject_user_id: updated.userId, outcome: status }
+      }
+    });
+    return updated;
   }
 }

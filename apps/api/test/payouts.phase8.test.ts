@@ -84,8 +84,9 @@ d("phase 8 — payouts (FR-20)", () => {
     expect(await app.deps.ledger.balance("seller", awaId, "XOF")).toBe(before - 100000n);
   });
 
-  it("falls back to aggregator when PI-SPI is down", async () => {
+  it("rail down → 503 rail_down, nothing settled and the ledger untouched", async () => {
     await fundSeller(60000n);
+    const before = await app.deps.ledger.balance("seller", awaId, "XOF");
     app.deps.mockPiSpi.down = true;
     const res = await app.inject({
       method: "POST",
@@ -94,9 +95,9 @@ d("phase 8 — payouts (FR-20)", () => {
       payload: { amount: { amount_minor: "50000", currency: "XOF" }, idempotency_key: `po-fb-${Date.now()}` }
     });
     app.deps.mockPiSpi.down = false;
-    expect(res.statusCode).toBe(201);
-    expect(res.json().rail).toBe("AGGREGATOR");
-    expect(app.deps.payouts.aggregatorPayouts.length).toBeGreaterThanOrEqual(1);
+    expect(res.statusCode).toBe(503);
+    expect(res.json().code).toBe("rail_down");
+    expect(await app.deps.ledger.balance("seller", awaId, "XOF")).toBe(before);
   });
 
   it("insufficient balance blocked; over-tier-limit blocked with upgrade path; idempotent replay", async () => {

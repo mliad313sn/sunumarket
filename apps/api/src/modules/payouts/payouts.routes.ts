@@ -70,11 +70,12 @@ export function registerPayoutRoutes(app: FastifyInstance, deps: AppDeps): void 
     const { id } = req.params as { id: string };
     const body = z.object({ reason: z.string().min(3) }).parse(req.body);
     try {
-      await deps.payments.refundOrder(id, body.reason);
-      return { status: "refunded" };
+      const result = await deps.payments.refundOrder(id, body.reason);
+      // idempotent: an already-refunded order answers 200 with the same shape
+      return { status: "refunded", already_refunded: result.alreadyRefunded };
     } catch (e) {
       if (e instanceof PaymentError) {
-        return reply.code(409).send({ code: e.code, message: e.message });
+        return reply.code(e.code === "refund_failed" ? 502 : 409).send({ code: e.code, message: e.message });
       }
       throw e;
     }
@@ -101,12 +102,34 @@ export function registerPayoutRoutes(app: FastifyInstance, deps: AppDeps): void 
     return { ok: true };
   });
 
-  // Admin: reconciliation queue + resolution + close report (FR-19b, FR-44b slice).
+  // Admin: reconciliation ingest + match + queue + resolution + close report (FR-19b, FR-44b slice).
+  app.post("/admin/reconciliation/ingest", { preHandler: requireRoles("admin") }, async (req, reply) => {
+    const body = z
+      .object({
+        provider_code: z.string().min(2).max(32),
+        settlement_date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+        source_file: z.string().min(1).max(256),
+        csv: z.string().min(1)
+      })
+      .parse(req.body);
+    const batch = await deps.reconciliation.ingestCsv(
+      body.provider_code,
+      body.settlement_date,
+      body.source_file,
+      body.csv
+    );
+    return reply.code(201).send({ id: batch.id, status: batch.status });
+  });
+  app.post("/admin/reconciliation/run-match", { preHandler: requireRoles("admin") }, async (req) => {
+    const body = z.object({ batch_id: z.string().uuid() }).parse(req.body);
+    return deps.reconciliation.runMatch(body.batch_id);
+  });
   app.get("/admin/reconciliation/flags", { preHandler: requireRoles("admin") }, async () =>
     deps.reconciliation.flagQueue()
   );
   app.post("/admin/reconciliation/flags/:id/resolve", { preHandler: requireRoles("admin") }, async (req) => {
-    await deps.reconciliation.resolveFlag((req.params as { id: string }).id);
+    const body = z.object({ reason: z.string().min(3).max(500) }).parse(req.body);
+    await deps.reconciliation.resolveFlag((req.params as { id: string }).id, req.user.sub, body.reason);
     return { ok: true };
   });
   app.get("/admin/reconciliation/close/:month", { preHandler: requireRoles("admin") }, async (req) =>

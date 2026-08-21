@@ -30,3 +30,19 @@ SELECT o.id, COUNT(a.id) AS succeeded
 FROM orders o LEFT JOIN payment_attempts a ON a.order_id = o.id AND a.status IN ('succeeded')
 WHERE o.status IN ('paid','preparing','in_delivery','delivered','completed')
 GROUP BY o.id HAVING COUNT(a.id) <> 1;
+
+-- 8. Ledger: no seller balance is ever negative (payout double-spend guard).
+SELECT a.owner_id, SUM(e.amount_minor) AS balance
+FROM ledger_accounts a JOIN ledger_entries e ON e.account_id = a.id
+WHERE a.owner_type = 'seller'
+GROUP BY a.owner_id HAVING SUM(e.amount_minor) < 0;
+
+-- 9. Every refund-resolved dispute whose order has a ledger sale also has the refund reversal.
+SELECT d.id AS dispute_id, s.id AS sale_transaction
+FROM disputes d
+JOIN ledger_transactions s ON s.kind = 'sale' AND s.source_ref = d.order_id::text
+WHERE d.status = 'resolved_refund'
+  AND NOT EXISTS (
+    SELECT 1 FROM ledger_transactions r
+    WHERE r.kind = 'refund' AND r.source_ref LIKE '%:' || s.id::text
+  );

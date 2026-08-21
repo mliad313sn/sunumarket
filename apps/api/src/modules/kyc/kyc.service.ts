@@ -45,7 +45,7 @@ export class KycService {
     });
   }
 
-  async decide(recordId: string, approve: boolean): Promise<void> {
+  async decide(recordId: string, approve: boolean, actorId: string | null = null): Promise<void> {
     const rec = await this.prisma.kycRecord.findUniqueOrThrow({ where: { id: recordId } });
     await this.prisma.kycRecord.update({
       where: { id: recordId },
@@ -54,6 +54,13 @@ export class KycService {
     if (approve) {
       await this.prisma.user.update({ where: { id: rec.userId }, data: { kycTier: rec.tier } });
     }
+    await this.prisma.auditLog.create({
+      data: {
+        actorId,
+        action: "kyc:decision",
+        detail: { record_id: recordId, user_id: rec.userId, tier: rec.tier, outcome: approve ? "approved" : "rejected" }
+      }
+    });
   }
 
   /**

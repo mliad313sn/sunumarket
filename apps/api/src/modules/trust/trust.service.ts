@@ -2,7 +2,7 @@ import type { PrismaClient } from "@prisma/client";
 
 export class TrustError extends Error {
   constructor(
-    public readonly code: "not_found" | "not_delivered" | "already_rated" | "invalid_state" | "forbidden",
+    public readonly code: "not_found" | "not_delivered" | "already_rated" | "invalid_state" | "refund_failed" | "forbidden",
     message: string
   ) {
     super(message);
@@ -80,10 +80,40 @@ export class TrustService {
     return disputes.reduce((s, d) => s + d.order.totalMinor, 0n);
   }
 
-  async resolveDispute(disputeId: string, resolution: "refund" | "reject") {
+  /**
+   * Dispute resolution (FR-40). Money-correct ordering: on "refund" the refund
+   * (provider reversal + ledger) runs FIRST via `executeRefund`; the payout
+   * freeze is lifted ONLY after it succeeded. On refund failure the dispute
+   * stays open and frozen, and the admin gets a mapped `refund_failed` error.
+   */
+  async resolveDispute(
+    disputeId: string,
+    resolution: "refund" | "reject",
+    actorId: string | null = null,
+    executeRefund?: (orderId: string) => Promise<unknown>
+  ) {
     const dispute = await this.prisma.dispute.findUniqueOrThrow({ where: { id: disputeId } });
     if (dispute.status !== "open") throw new TrustError("invalid_state", "litige déjà résolu");
-    return this.prisma.dispute.update({
+
+    if (resolution === "refund" && executeRefund) {
+      try {
+        await executeRefund(dispute.orderId);
+      } catch (e) {
+        await this.prisma.auditLog.create({
+          data: {
+            actorId,
+            action: "dispute:refund_failed",
+            detail: { dispute_id: disputeId, order_id: dispute.orderId, error: (e as Error).message }
+          }
+        });
+        throw new TrustError(
+          "refund_failed",
+          "remboursement échoué — le litige reste ouvert et le gel de paiement est conservé"
+        );
+      }
+    }
+
+    const updated = await this.prisma.dispute.update({
       where: { id: disputeId },
       data: {
         status: resolution === "refund" ? "resolved_refund" : "resolved_reject",
@@ -91,6 +121,14 @@ export class TrustService {
         resolvedAt: new Date()
       }
     });
+    await this.prisma.auditLog.create({
+      data: {
+        actorId,
+        action: "dispute:resolve",
+        detail: { dispute_id: disputeId, order_id: dispute.orderId, resolution }
+      }
+    });
+    return updated;
   }
 
   /** FR-41: reports/takedowns — anyone can report products, shops, riders, partners. */

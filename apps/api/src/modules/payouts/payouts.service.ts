@@ -21,8 +21,6 @@ export class PayoutError extends Error {
  * optional payout PIN (DC-8.3).
  */
 export class PayoutsService {
-  /** Aggregator fallback recorder (mock rail). */
-  readonly aggregatorPayouts: Array<{ sellerId: string; amountMinor: bigint }> = [];
   /** Scoped dispute freeze (FR-40): injected to avoid a service cycle. */
   private frozenProvider: (sellerId: string) => Promise<bigint> = async () => 0n;
 
@@ -55,35 +53,43 @@ export class PayoutsService {
 
     await this.kyc.assertPayoutWithinLimit(sellerId, amountMinor);
 
-    const balance = await this.ledger.balance("seller", sellerId, "XOF");
-    const frozen = await this.frozenProvider(sellerId);
-    if (balance - frozen < amountMinor) {
-      throw new PayoutError(
-        "insufficient_balance",
-        frozen > 0n ? "solde bloqué par un litige en cours (gel ciblé)" : "solde insuffisant"
-      );
-    }
+    // Per-seller serialization: the advisory xact lock closes the double-spend
+    // window between the balance-minus-frozen check and the ledger debit.
+    const payout = await this.prisma.$transaction(async (tx) => {
+      await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${sellerId}))`;
 
-    // PI-SPI first, aggregator fallback (FR-20).
-    let rail = "PI_SPI";
-    const transfer = await this.piSpi.transfer(`seller:${sellerId}`, amountMinor, "payout");
-    if (!transfer.ok) {
-      rail = "AGGREGATOR";
-      this.aggregatorPayouts.push({ sellerId, amountMinor });
-    }
-
-    const payout = await this.prisma.payout.create({
-      data: {
-        sellerId,
-        amountMinor,
-        currency: "XOF",
-        rail,
-        status: "settled", // instant in mock; real adapters transition async
-        pinVerified: true,
-        idempotencyKey: opts.idempotencyKey
+      const balance = await this.ledger.balance("seller", sellerId, "XOF");
+      const frozen = await this.frozenProvider(sellerId);
+      if (balance - frozen < amountMinor) {
+        throw new PayoutError(
+          "insufficient_balance",
+          frozen > 0n ? "solde bloqué par un litige en cours (gel ciblé)" : "solde insuffisant"
+        );
       }
+
+      // PI-SPI rail (FR-20). If the rail is down, NOTHING is settled and NOTHING
+      // is debited — the caller gets a retriable rail_down error.
+      const transfer = await this.piSpi.transfer(`seller:${sellerId}`, amountMinor, "payout");
+      if (!transfer.ok) {
+        throw new PayoutError("rail_down", "rail de paiement indisponible — réessayez dans quelques minutes");
+      }
+
+      const created = await tx.payout.create({
+        data: {
+          sellerId,
+          amountMinor,
+          currency: "XOF",
+          rail: "PI_SPI",
+          status: "settled", // instant in mock; real adapters transition async
+          pinVerified: true,
+          idempotencyKey: opts.idempotencyKey
+        }
+      });
+      // Ledger debit commits before the advisory lock releases (own connection,
+      // awaited inside the locked section) — the next holder sees the new balance.
+      await this.ledger.recordPayout({ sellerId, amountMinor, currency: "XOF", rail: "PI_SPI", payoutId: created.id });
+      return created;
     });
-    await this.ledger.recordPayout({ sellerId, amountMinor, currency: "XOF", rail, payoutId: payout.id });
     return this.viewOf(payout);
   }
 

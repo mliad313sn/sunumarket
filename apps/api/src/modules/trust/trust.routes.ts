@@ -9,6 +9,7 @@ const ERROR_STATUS: Record<string, number> = {
   not_delivered: 409,
   already_rated: 409,
   invalid_state: 409,
+  refund_failed: 502,
   forbidden: 403
 };
 
@@ -159,13 +160,14 @@ export function registerTrustRoutes(app: FastifyInstance, deps: AppDeps): void {
   app.post("/admin/disputes/:id/resolve", { preHandler: requireRoles("admin") }, async (req, reply) =>
     guard(reply, async () => {
       const body = z.object({ resolution: z.enum(["refund", "reject"]) }).parse(req.body);
-      const d = await deps.trust.resolveDispute((req.params as { id: string }).id, body.resolution);
-      if (body.resolution === "refund") {
-        // FR-18 flow — refund the order (COD orders just transition)
-        await deps.payments.refundOrder(d.orderId, "dispute_resolved_refund").catch(async () => {
-          await deps.orders.transition(d.orderId, "refunded");
-        });
-      }
+      // FR-18 flow — refund executes BEFORE the freeze is lifted; failure keeps
+      // the dispute open + frozen and surfaces a mapped refund_failed error.
+      const d = await deps.trust.resolveDispute(
+        (req.params as { id: string }).id,
+        body.resolution,
+        req.user.sub,
+        (orderId) => deps.payments.refundOrder(orderId, "dispute_resolved_refund")
+      );
       return { status: d.status };
     })
   );

@@ -86,6 +86,8 @@ export class MockPaymentProvider implements PaymentProvider {
     amountMinor?: bigint;
     currency?: string;
     eventId?: string;
+    /** Override for freshness-window tests; defaults to "now". */
+    occurredAt?: string;
   }): { rawBody: string; signature: string } {
     const body = {
       provider_code: this.code,
@@ -95,7 +97,7 @@ export class MockPaymentProvider implements PaymentProvider {
       ...(input.amountMinor !== undefined
         ? { amount: { amount_minor: input.amountMinor.toString(), currency: input.currency ?? "XOF" } }
         : {}),
-      occurred_at: new Date().toISOString()
+      occurred_at: input.occurredAt ?? new Date().toISOString()
     };
     const rawBody = JSON.stringify(body);
     return { rawBody, signature: createHmac("sha256", this.secret).update(rawBody).digest("hex") };

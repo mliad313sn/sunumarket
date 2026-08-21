@@ -118,10 +118,18 @@ export class ReconciliationService {
     });
   }
 
-  async resolveFlag(id: string): Promise<void> {
-    await this.prisma.reconciliationFlag.update({
+  /** Resolve a flag; actor + reason land in the append-only audit_log (no columns on the flag row). */
+  async resolveFlag(id: string, actorId: string | null = null, reason: string | null = null): Promise<void> {
+    const flag = await this.prisma.reconciliationFlag.update({
       where: { id },
       data: { status: "resolved", resolvedAt: new Date() }
+    });
+    await this.prisma.auditLog.create({
+      data: {
+        actorId,
+        action: "recon:flag_resolve",
+        detail: { flag_id: id, kind: flag.kind, order_id: flag.orderId, reason }
+      }
     });
   }
 

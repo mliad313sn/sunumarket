@@ -1,7 +1,7 @@
 import { randomUUID } from "node:crypto";
 import type { PrismaClient } from "@prisma/client";
 import type { PackRegistry } from "@sunumarket/config";
-import type { WebhookResult } from "@sunumarket/shared";
+import { canTransition, type OrderStatus, type WebhookResult } from "@sunumarket/shared";
 import type { MessagingProvider } from "../../lib/messaging.js";
 import type { FraudService } from "../fraud/fraud.service.js";
 import type { VelocityRules } from "../fraud/velocity.js";
@@ -22,6 +22,7 @@ export class PaymentError extends Error {
       | "provider_outage"
       | "declined"
       | "forged_reference"
+      | "refund_failed"
       | "forbidden",
     message: string
   ) {
@@ -289,6 +290,23 @@ export class PaymentsService {
       throw e;
     }
 
+    // Freshness window (replay hardening): a signed-but-stale event we have never
+    // seen is rejected and flagged — exact replays above still answer 200/duplicate.
+    const maxAgeMs = Number(process.env.WEBHOOK_MAX_AGE_MIN ?? "10") * 60_000;
+    const maxFutureMs = Number(process.env.WEBHOOK_MAX_FUTURE_MIN ?? "2") * 60_000;
+    const occurredAt = Date.parse(result.occurred_at);
+    const now = Date.now();
+    if (!Number.isFinite(occurredAt) || now - occurredAt > maxAgeMs || occurredAt - now > maxFutureMs) {
+      await this.fraud.record("webhook_stale", {
+        detail: { provider: providerCode, event_id: result.event_id, occurred_at: result.occurred_at }
+      });
+      await this.prisma.webhookEvent.updateMany({
+        where: { providerId: providerRow.id, eventId: result.event_id },
+        data: { outcome: "stale" }
+      });
+      return { status: 400, outcome: "stale" };
+    }
+
     const outcome = await this.applyWebhook(result);
     await this.prisma.webhookEvent.updateMany({
       where: { providerId: providerRow.id, eventId: result.event_id },
@@ -420,22 +438,48 @@ export class PaymentsService {
     await this.recordSaleFor(attempt.id, true);
   }
 
-  /** FR-18: refund a paid order per its method (PI-SPI reverse / aggregator refund). */
-  async refundOrder(orderId: string, reason: string): Promise<void> {
+  /**
+   * FR-18: refund a paid order per its method (PI-SPI reverse / aggregator refund).
+   * Ordering matters (money-correctness): provider refund → ledger reversal →
+   * order transition LAST. A provider/ledger failure leaves the order un-refunded
+   * so the call can be retried. Idempotent: an already-refunded order is a no-op.
+   */
+  async refundOrder(orderId: string, reason: string): Promise<{ alreadyRefunded: boolean }> {
+    const order = await this.prisma.order.findUniqueOrThrow({ where: { id: orderId } });
+    if (order.status === "refunded") return { alreadyRefunded: true };
+
     const attempt = await this.prisma.paymentAttempt.findFirst({
-      where: { orderId, status: "succeeded" },
+      where: { orderId, status: { in: ["succeeded", "succeeded_late"] } },
       include: { provider: true, transaction: true, order: true }
     });
     if (!attempt) throw new PaymentError("invalid_state", "aucun paiement à rembourser");
-    await this.orders.transition(orderId, "refunded");
+    if (!canTransition(order.status as OrderStatus, "refunded")) {
+      throw new PaymentError("invalid_state", `commande non remboursable depuis l'état ${order.status}`);
+    }
+
     if (attempt.provider && attempt.providerRef) {
       const p = this.router.provider(attempt.provider.code);
-      await p.refund(attempt.providerRef, attempt.order.totalMinor, attempt.order.currency);
+      let result;
+      try {
+        result = await p.refund(attempt.providerRef, attempt.order.totalMinor, attempt.order.currency);
+      } catch (e) {
+        throw new PaymentError("refund_failed", `remboursement fournisseur échoué: ${(e as Error).message}`);
+      }
+      if (!result.ok) {
+        throw new PaymentError("refund_failed", `remboursement fournisseur refusé: ${result.reason ?? "inconnu"}`);
+      }
     }
     if (attempt.transaction) {
-      await this.ledger.recordRefund(attempt.transaction.id, reason);
+      // Guard against a double reversal when a previous call posted the ledger
+      // refund but failed before the order transition (retry path).
+      const existing = await this.prisma.ledgerTransaction.findFirst({
+        where: { kind: "refund", sourceRef: { endsWith: `:${attempt.transaction.id}` } }
+      });
+      if (!existing) await this.ledger.recordRefund(attempt.transaction.id, reason);
     }
+    await this.orders.transition(orderId, "refunded");
     await this.notify(attempt.order.guestPhone, "SunuMarket: votre remboursement est en cours.");
+    return { alreadyRefunded: false };
   }
 
   private async notify(phone: string | null, body: string): Promise<void> {

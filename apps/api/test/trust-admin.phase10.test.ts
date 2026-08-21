@@ -310,7 +310,8 @@ d("phase 10 — admin console & config panels (FR-42..44b)", () => {
     const resolve = await app.inject({
       method: "POST",
       url: `/admin/reconciliation/flags/${flag.id}/resolve`,
-      headers: { authorization: `Bearer ${adminToken}` }
+      headers: { authorization: `Bearer ${adminToken}` },
+      payload: { reason: "écart de 100 FCFA confirmé côté fournisseur" }
     });
     expect(resolve.statusCode).toBe(200);
   });

@@ -11,7 +11,14 @@ export default tseslint.config(
   },
   {
     // DC-5 / Phase 2 "no float money" guard: money amounts are bigint minor units only.
-    files: ["packages/shared/src/money/**", "packages/shared/src/ledger/**"],
+    files: [
+      "packages/shared/src/money/**",
+      "packages/shared/src/ledger/**",
+      "apps/api/src/modules/ledger/**",
+      "apps/api/src/modules/payments/**",
+      "apps/api/src/modules/payouts/**",
+      "apps/api/src/modules/reconciliation/**"
+    ],
     rules: {
       "no-restricted-syntax": [
         "error",

@@ -111,13 +111,13 @@ export function registerAuthRoutes(app: FastifyInstance, deps: AppDeps): void {
   app.post("/admin/kyc/:id/decide", { preHandler: requireRoles("admin") }, async (req) => {
     const { id } = req.params as { id: string };
     const { approve } = req.body as { approve: boolean };
-    await kyc.decide(id, approve);
+    await kyc.decide(id, approve, req.user.sub);
     return { ok: true };
   });
   app.get("/admin/fraud/queue", { preHandler: requireRoles("admin") }, async () => deps.fraud.queue());
   app.post("/admin/fraud/:id/review", { preHandler: requireRoles("admin") }, async (req) => {
     const { id } = req.params as { id: string };
     const { status } = req.body as { status: "cleared" | "actioned" };
-    return deps.fraud.review(id, status);
+    return deps.fraud.review(id, status, req.user.sub);
   });
 }
