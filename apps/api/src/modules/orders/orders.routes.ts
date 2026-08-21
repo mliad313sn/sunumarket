@@ -62,6 +62,21 @@ export function registerOrderRoutes(app: FastifyInstance, deps: AppDeps): void {
     }
   });
 
+  // Buyer cancel — no auth, the tracking token IS the capability (same trust
+  // level as GET /track/:token). Only from payment_pending; 409 otherwise.
+  app.post("/track/:token/cancel", async (req, reply) => {
+    const { token } = req.params as { token: string };
+    try {
+      const order = await orders.cancelByToken(token);
+      return serializeOrder(order);
+    } catch (e) {
+      if (e instanceof OrderError) {
+        return reply.code(ORDER_ERROR_STATUS[e.code] ?? 400).send({ code: e.code, message: e.message });
+      }
+      throw e;
+    }
+  });
+
   app.post("/orders/:id/rotate-tracking", { preHandler: requireRoles("seller") }, async (req, reply) => {
     const { id } = req.params as { id: string };
     try {

@@ -4,7 +4,8 @@ import type { JobStatus } from "../contracts/delivery.js";
  * Dispatch/job state machine — FR-26 (TDD-critical machine, Playbook 0.4). Pure.
  *
  * requested → broadcasting → accepted → picked_up → en_route → arrived → delivered
- * failed_attempt loops back to en_route (retry) or ends in cancelled (refund path).
+ * failed_attempt loops back to en_route (retry), re-enters broadcasting
+ * (rider incident → re-dispatch to a new rider), or ends in cancelled (refund path).
  * SELF/PARTNER modes enter at accepted (no broadcast).
  */
 const TRANSITIONS: Record<JobStatus, readonly JobStatus[]> = {
@@ -14,7 +15,7 @@ const TRANSITIONS: Record<JobStatus, readonly JobStatus[]> = {
   picked_up: ["en_route", "failed_attempt", "cancelled"],
   en_route: ["arrived", "failed_attempt"],
   arrived: ["delivered", "failed_attempt"],
-  failed_attempt: ["en_route", "arrived", "cancelled"],
+  failed_attempt: ["en_route", "arrived", "broadcasting", "cancelled"],
   delivered: [],
   cancelled: []
 };

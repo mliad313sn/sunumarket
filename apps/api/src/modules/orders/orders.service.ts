@@ -1,6 +1,7 @@
 import type { PrismaClient, Prisma } from "@prisma/client";
 import { assertTransition, holdsStock, type OrderStatus } from "@sunumarket/shared";
 import { generateToken } from "../../lib/crypto.js";
+import type { MessagingProvider } from "../../lib/messaging.js";
 import type { GeoApiService } from "../geo/geo.service.js";
 
 const PAYMENT_HOLD_MS = 30 * 60 * 1000; // FR-17: 30-min reservation
@@ -34,7 +35,8 @@ export interface CreateOrderInput {
 export class OrdersService {
   constructor(
     private readonly prisma: PrismaClient,
-    private readonly geo: GeoApiService
+    private readonly geo: GeoApiService,
+    private readonly messaging: MessagingProvider
   ) {}
 
   /**
@@ -123,6 +125,9 @@ export class OrdersService {
           return tx.order.findUniqueOrThrow({ where: { id: o.id }, include: { items: true } });
         });
       });
+      // DC-15 / pass-2 fix 5: the buyer (esp. COD/guest) must not lose the
+      // tracking link when the browser closes — SMS it with the confirmation.
+      await this.sendConfirmationSms(buyerId, input.guest_phone ?? null, order.trackingToken);
       return { order, duplicate: false };
     } catch (e) {
       // Idempotency race: two same-key requests in flight — return the winner's order.
@@ -135,6 +140,22 @@ export class OrdersService {
       }
       throw e;
     }
+  }
+
+  /** Order-confirmation SMS with the tokenized tracking link (FR-38 companion). */
+  private async sendConfirmationSms(buyerId: string | null, guestPhone: string | null, trackingToken: string): Promise<void> {
+    let phone = guestPhone;
+    if (!phone && buyerId) {
+      const buyer = await this.prisma.user.findUnique({ where: { id: buyerId } });
+      phone = buyer?.phone ?? null;
+    }
+    if (!phone || phone.startsWith("deleted:")) return;
+    const base = process.env.PUBLIC_WEB_URL ?? "https://sunumarket.example";
+    await this.messaging.sendSms({
+      phone,
+      senderId: "SUNUMKT",
+      body: `SunuMarket: commande reçue ✓ Suivez votre livraison ici: ${base}/#/track/${trackingToken}`
+    });
   }
 
   /** Guarded transition through the shared state machine. */
@@ -206,6 +227,28 @@ export class OrdersService {
       eta_hint: null,
       history: (order.job?.events ?? []).map((e) => ({ status: e.status, at: e.at.toISOString() }))
     };
+  }
+
+  /**
+   * Pass-2 fix 6: buyer cancel via the tracking token (the token IS the
+   * capability, same trust level as GET /track/:token). Only while the order
+   * is still payment_pending — a paid order refunds through admin/seller flows.
+   * Stock restores exactly once via the stock_restored guard in transition().
+   */
+  async cancelByToken(token: string) {
+    const order = await this.prisma.order.findUnique({ where: { trackingToken: token } });
+    if (!order) throw new OrderError("not_found", "lien de suivi invalide");
+    if (order.status !== "payment_pending") {
+      throw new OrderError("invalid_state", "annulation impossible — la commande n'est plus en attente de paiement");
+    }
+    // Close any open payment attempt; money that still lands hits the late-webhook
+    // auto-refund path (ADR-0007), never a cancelled order.
+    await this.prisma.paymentAttempt.updateMany({
+      where: { orderId: order.id, status: { in: ["initiated", "ussd_pending"] } },
+      data: { status: "cancelled", failureReason: "buyer_cancelled" }
+    });
+    await this.transition(order.id, "cancelled");
+    return this.prisma.order.findUniqueOrThrow({ where: { id: order.id }, include: { items: true } });
   }
 
   async rotateTrackingToken(orderId: string, sellerId: string) {

@@ -99,8 +99,15 @@ export function registerDeliveryRoutes(app: FastifyInstance, deps: AppDeps): voi
       orderBy: { createdAt: "desc" },
       take: 50
     });
+    // Pass-2 fix 7: earnings visibility — Σ delivery fees of delivered jobs
+    // (bigint minor units, DC-5), alongside the COD liability.
+    const earned = await deps.prisma.deliveryJob.aggregate({
+      where: { riderId: req.user.sub, status: "delivered" },
+      _sum: { feeMinor: true }
+    });
     return {
       outstanding: { amount_minor: outstanding.toString(), currency: "XOF" },
+      earned_total: { amount_minor: (earned._sum.feeMinor ?? 0n).toString(), currency: "XOF" },
       entries: entries.map((e) => ({
         amount_minor: e.amountMinor.toString(),
         kind: e.kind,

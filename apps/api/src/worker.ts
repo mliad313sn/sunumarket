@@ -28,6 +28,16 @@ async function safely(name: string, fn: () => Promise<number>): Promise<void> {
   }
 }
 
+/** Liveness (pass-2 fix 10): each sweep upserts its heartbeat; /health flags staleness. */
+async function beat(id: string): Promise<void> {
+  const beatAt = new Date();
+  try {
+    await deps.prisma.workerHeartbeat.upsert({ where: { id }, update: { beatAt }, create: { id, beatAt } });
+  } catch (e) {
+    console.error(`[worker] heartbeat ${id} failed`, e);
+  }
+}
+
 export async function fastSweep(): Promise<void> {
   await safely("expire-orders", () => deps.orders.expireOverdueOrders());
   await safely("ussd-timeouts", () => deps.payments.sweepUssdTimeouts());
@@ -35,11 +45,13 @@ export async function fastSweep(): Promise<void> {
   if (deps.messaging instanceof OutboxMessagingProvider) {
     await safely("sms-outbox-retry", () => (deps.messaging as OutboxMessagingProvider).flushQueued());
   }
+  await beat("fast");
 }
 
 export async function slowSweep(): Promise<void> {
   await safely("retention-truncation", () => deps.geo.runRetentionTruncation());
   await safely("auto-complete", () => deps.orders.autoCompleteDelivered());
+  await beat("slow");
 }
 
 if (process.env.NODE_ENV !== "test" && !process.env.VITEST) {

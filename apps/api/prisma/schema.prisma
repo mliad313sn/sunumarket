@@ -502,6 +502,9 @@ model RiderCashLedger {
   amountMinor BigInt   @map("amount_minor") // collected(+) remitted(-)
   currency    String   @db.Char(3)
   kind        String // cod_collected|remitted_pispi|remitted_agent
+  // Remittance idempotency: the table is append-only (DB trigger), so replays
+  // must be prevented at insert time — unique key, second call returns the first.
+  idempotencyKey String? @unique @map("idempotency_key")
   createdAt   DateTime @default(now()) @map("created_at")
 
   rider Rider @relation(fields: [riderId], references: [userId])
@@ -558,6 +561,15 @@ model AuditLog {
   at      DateTime @default(now())
 
   @@map("audit_log")
+}
+
+// Worker liveness: each sweep upserts its row after a tick; /health reads the
+// freshest beat and flags the worker stale past 3× the sweep interval.
+model WorkerHeartbeat {
+  id     String   @id // sweep name: fast|slow
+  beatAt DateTime @map("beat_at") @db.Timestamptz(6)
+
+  @@map("worker_heartbeats")
 }
 
 model SmsOutbox {

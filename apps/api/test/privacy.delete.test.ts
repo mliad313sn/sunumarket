@@ -96,10 +96,12 @@ d("privacy delete (FR-25 adjunct) — anonymization", () => {
     expect(rows[0]!.lat).toBeCloseTo(14.71, 5);
     expect(rows[0]!.truncate_after).toBeNull();
 
-    // SMS outbox: pending sends cancelled, phone scrubbed everywhere.
+    // SMS outbox: pending sends cancelled, phone scrubbed everywhere, bodies redacted.
     expect(await prisma.smsOutbox.count({ where: { phone } })).toBe(0);
     expect(await prisma.smsOutbox.count({ where: { phone: `deleted:${userId}`, status: "queued" } })).toBe(0);
-    expect(await prisma.smsOutbox.count({ where: { phone: `deleted:${userId}` } })).toBe(2);
+    const outboxRows = await prisma.smsOutbox.findMany({ where: { phone: `deleted:${userId}` } });
+    expect(outboxRows).toHaveLength(2);
+    expect(outboxRows.every((r) => r.body === "[supprimé]")).toBe(true);
 
     // Append-only audit trail records the deletion.
     const audit = await prisma.auditLog.findFirst({ where: { actorId: userId, action: "privacy_delete" } });

@@ -2,6 +2,7 @@ import { randomInt } from "node:crypto";
 import type { PrismaClient } from "@prisma/client";
 import { assertJobTransition, canJobTransition, type JobStatus } from "@sunumarket/shared";
 import type { MessagingProvider } from "../../lib/messaging.js";
+import type { FraudService } from "../fraud/fraud.service.js";
 import type { KycService } from "../kyc/kyc.service.js";
 import type { OrdersService } from "../orders/orders.service.js";
 import type { MockPiSpiProvider } from "../payments/mock-provider.js";
@@ -36,7 +37,8 @@ export class DeliveryService {
     private readonly piSpi: MockPiSpiProvider,
     private readonly messaging: MessagingProvider,
     private readonly partnerAdapters: Map<string, DeliveryPartnerAdapter>,
-    private readonly ledger: LedgerService
+    private readonly ledger: LedgerService,
+    private readonly fraud: FraudService
   ) {}
 
   /** FR-26: request delivery for a paid order; SELF/RIDER/PARTNER (DC on mode). */
@@ -151,7 +153,12 @@ export class DeliveryService {
     await this.prisma.deliveryJob.update({ where: { id: jobId }, data: { status: next } });
     if (next === "picked_up") {
       const order = await this.prisma.order.findUniqueOrThrow({ where: { id: job.orderId } });
-      if (order.status === "preparing") await this.orders.transition(job.orderId, "in_delivery");
+      // preparing → in_delivery (normal path) and delivery_issue → in_delivery
+      // (recovery: a new rider picked up after an incident re-dispatch) are both
+      // legal order edges — the mirror keeps the order recoverable.
+      if (order.status === "preparing" || order.status === "delivery_issue") {
+        await this.orders.transition(job.orderId, "in_delivery");
+      }
     }
     if (next === "failed_attempt") {
       const order = await this.prisma.order.findUniqueOrThrow({ where: { id: job.orderId } });
@@ -271,7 +278,12 @@ export class DeliveryService {
     return this.prisma.deliveryJob.findUniqueOrThrow({ where: { id: jobId } });
   }
 
-  /** FR-31: delivery incident → order delivery_issue (refund via FR-18 flow). */
+  /**
+   * FR-31: delivery incident → order delivery_issue (refund via FR-18 flow).
+   * RIDER-mode jobs do not stay orphaned (pass-2 fix 3): the job is released
+   * back to broadcasting, the rider is unassigned, offers re-open and the
+   * seller is notified — a new rider can accept, deliver and recover the order.
+   */
   async reportIncident(jobId: string, riderId: string | null, reason: string) {
     const job = await this.prisma.deliveryJob.findUniqueOrThrow({ where: { id: jobId } });
     if (riderId && job.riderId !== riderId) throw new DeliveryError("forbidden", "pas votre course");
@@ -279,40 +291,87 @@ export class DeliveryService {
     await this.prisma.jobEvent.create({
       data: { jobId, eventId: `incident-${Date.now()}`, status: `failed_attempt:${reason}`, at: new Date() }
     });
+
+    if (job.mode === "RIDER") {
+      // Re-dispatch: failed_attempt → broadcasting, rider released.
+      await this.transition(jobId, "broadcasting");
+      await this.prisma.deliveryJob.update({ where: { id: jobId }, data: { riderId: null } });
+      if (job.riderId) {
+        // The incident rider's claim is closed; everyone else's offer re-opens.
+        await this.prisma.dispatchOffer.updateMany({
+          where: { jobId, riderId: job.riderId },
+          data: { response: "expired" }
+        });
+        await this.prisma.dispatchOffer.updateMany({
+          where: { jobId, riderId: { not: job.riderId }, response: { in: ["expired", "rejected"] } },
+          data: { response: "pending" }
+        });
+      }
+      const order = await this.prisma.order.findUniqueOrThrow({
+        where: { id: job.orderId },
+        include: { shop: { include: { seller: true } } }
+      });
+      // Fresh broadcast round now; updated_at is bumped by the update above, so
+      // rebroadcastStale re-offers/escalates if nobody accepts within the timeout.
+      await this.broadcast(jobId, order.shop.cityId);
+      await this.messaging.sendSms({
+        phone: order.shop.seller.phone,
+        senderId: "SUNUMKT",
+        body: "SunuMarket: incident livreur signalé — nouvelle recherche de livreur en cours pour votre commande."
+      });
+    }
     return this.prisma.deliveryJob.findUniqueOrThrow({ where: { id: jobId } });
   }
 
-  /** FR-34b: COD remittance — PI-SPI rail or agent deposit guidance. */
+  /**
+   * FR-34b: COD remittance — PI-SPI rail or agent deposit guidance.
+   * Idempotent by key (pass-2 fix 2): rider_cash_ledger is append-only (DB
+   * trigger), so a replay must never post a second entry — the unique
+   * idempotency_key column blocks the insert and the original result is
+   * returned instead.
+   */
   async remit(riderId: string, amountMinor: bigint, rail: "PI_SPI" | "AGENT_DEPOSIT", idempotencyKey: string) {
-    const dup = await this.prisma.riderCashLedger.findFirst({
-      where: { riderId, kind: { in: ["remitted_pispi", "remitted_agent"] }, orderId: null },
-      orderBy: { createdAt: "desc" }
-    });
-    void dup;
+    const dup = await this.prisma.riderCashLedger.findUnique({ where: { idempotencyKey } });
+    if (dup) return this.remitResult(dup.riderId, -dup.amountMinor, dup.kind === "remitted_agent" ? "AGENT_DEPOSIT" : "PI_SPI");
+
     const outstanding = await this.codOutstanding(riderId);
     if (amountMinor > outstanding) throw new DeliveryError("invalid_state", "montant supérieur à votre solde COD");
 
     if (rail === "PI_SPI") {
       const t = await this.piSpi.transfer(`rider:${riderId}`, amountMinor, "remittance");
       if (!t.ok) throw new DeliveryError("invalid_state", "PI-SPI indisponible — utilisez un dépôt agent");
+    }
+    try {
       await this.prisma.riderCashLedger.create({
-        data: { riderId, amountMinor: -amountMinor, currency: "XOF", kind: "remitted_pispi" }
+        data: {
+          riderId,
+          amountMinor: -amountMinor,
+          currency: "XOF",
+          kind: rail === "PI_SPI" ? "remitted_pispi" : "remitted_agent",
+          idempotencyKey
+        }
       });
-    } else {
-      await this.prisma.riderCashLedger.create({
-        data: { riderId, amountMinor: -amountMinor, currency: "XOF", kind: "remitted_agent" }
-      });
+    } catch (e) {
+      // Same-key race: the concurrent call already posted — return its result.
+      if ((e as { code?: string }).code === "P2002") {
+        const winner = await this.prisma.riderCashLedger.findUniqueOrThrow({ where: { idempotencyKey } });
+        return this.remitResult(winner.riderId, -winner.amountMinor, winner.kind === "remitted_agent" ? "AGENT_DEPOSIT" : "PI_SPI");
+      }
+      throw e;
     }
     await this.refreshCodCache(riderId);
+    return this.remitResult(riderId, amountMinor, rail);
+  }
+
+  private async remitResult(riderId: string, remittedMinor: bigint, rail: "PI_SPI" | "AGENT_DEPOSIT") {
     return {
-      remitted: amountMinor.toString(),
+      remitted: remittedMinor.toString(),
       outstanding: (await this.codOutstanding(riderId)).toString(),
       guidance:
         rail === "AGENT_DEPOSIT"
           ? "Déposez le montant chez l'agent partenaire le plus proche avec la référence ci-dessus."
           : "Remise instantanée via PI-SPI effectuée."
     };
-    void idempotencyKey;
   }
 
   /** COD invariant source of truth: Σcollected − Σremitted. */
@@ -346,9 +405,25 @@ export class DeliveryService {
       await this.broadcast(job.id, job.order.shop.cityId);
       const round =
         (await this.prisma.jobEvent.count({ where: { jobId: job.id, status: "rebroadcast" } })) + 1;
-      await this.prisma.jobEvent.create({
-        data: { jobId: job.id, eventId: `rebroadcast-${round}-${now.getTime()}`, status: "rebroadcast", at: now }
-      });
+      // Deterministic event id per job+round (pass-2 fix 4): the round marker and
+      // the staleness bump commit atomically, and @@unique([jobId, eventId]) makes
+      // a crashed/concurrent sweep replay a no-op — the escalation SMS can never
+      // double-fire for the same round.
+      try {
+        await this.prisma.$transaction([
+          this.prisma.jobEvent.create({
+            data: { jobId: job.id, eventId: `rebroadcast-${round}`, status: "rebroadcast", at: now }
+          }),
+          this.prisma.deliveryJob.update({ where: { id: job.id }, data: { updatedAt: now } })
+        ]);
+      } catch (e) {
+        if ((e as { code?: string }).code === "P2002") {
+          // This round was already recorded by another run — skip the SMS, just de-stale.
+          await this.prisma.deliveryJob.update({ where: { id: job.id }, data: { updatedAt: now } });
+          continue;
+        }
+        throw e;
+      }
       if (round >= 2) {
         await this.messaging.sendSms({
           phone: job.order.shop.seller.phone,
@@ -356,7 +431,6 @@ export class DeliveryService {
           body: "SunuMarket: aucun livreur n'a accepté votre course. Envisagez la livraison partenaire ou par vous-même depuis la commande."
         });
       }
-      await this.prisma.deliveryJob.update({ where: { id: job.id }, data: { updatedAt: now } });
     }
     return stale.length;
   }
@@ -365,8 +439,22 @@ export class DeliveryService {
     const partner = await this.prisma.partner.findUniqueOrThrow({ where: { id: partnerId } });
     const adapter = this.partnerAdapters.get(partner.adapter);
     if (!adapter) return { status: 404, outcome: "unknown_adapter" };
-    const ev = adapter.verifyWebhook(rawBody, signature);
-    if (!ev) return { status: 401, outcome: "rejected" };
+    // Per-partner secret isolation (pass-2 fix 1, ADR-0012): webhook_secret_ref
+    // is the NAME of an env var (credentials stay env-only per Playbook 0.5);
+    // the shared dev default only applies when the ref is null/unset, so partner
+    // A's secret can never validate a webhook aimed at partner B.
+    const secret =
+      (partner.webhookSecretRef ? process.env[partner.webhookSecretRef] : undefined) ??
+      process.env.PARTNER_DIALOG_WEBHOOK_SECRET ??
+      "partner-secret";
+    const ev = adapter.verifyWebhook(rawBody, signature, secret);
+    if (!ev) {
+      // Mirror the payments bad-signature path: a forged partner webhook is a fraud signal.
+      await this.fraud.record("webhook_signature_invalid", {
+        detail: { partner: partner.name, partner_id: partnerId, source: "partner_webhook" }
+      });
+      return { status: 401, outcome: "rejected" };
+    }
 
     const job = await this.prisma.deliveryJob.findUnique({ where: { id: ev.job_id } });
     if (!job || job.partnerId !== partnerId) return { status: 404, outcome: "unknown_job" };

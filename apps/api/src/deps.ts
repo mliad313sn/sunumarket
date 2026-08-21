@@ -2,6 +2,8 @@ import type { PrismaClient } from "@prisma/client";
 import { PackRegistry } from "@sunumarket/config";
 import { getPrisma } from "./lib/prisma.js";
 import { MockMessagingProvider, OutboxMessagingProvider, type MessagingProvider } from "./lib/messaging.js";
+import { assertProductionSecrets } from "./lib/secrets.js";
+import { buildDefaultRateLimiters, type RateLimiters } from "./lib/rate-limit.js";
 import { AuthService } from "./modules/auth/auth.service.js";
 import { PrivacyService } from "./modules/auth/privacy.service.js";
 import { FraudService } from "./modules/fraud/fraud.service.js";
@@ -45,9 +47,12 @@ export interface AppDeps {
   mockPartner: MockPartnerAdapter;
   trust: TrustService;
   admin: AdminService;
+  rateLimits: RateLimiters;
 }
 
 export function buildDeps(overrides: Partial<AppDeps> = {}): AppDeps {
+  // NFR-3: never boot production on dev-default secrets (pass-2 fix 8).
+  assertProductionSecrets();
   const prisma = overrides.prisma ?? getPrisma();
   const packs = overrides.packs ?? new PackRegistry();
   // DC-15: notifications persist to sms_outbox before hitting the gateway.
@@ -59,7 +64,7 @@ export function buildDeps(overrides: Partial<AppDeps> = {}): AppDeps {
   const kyc = overrides.kyc ?? new KycService(prisma, packs);
   const catalog = overrides.catalog ?? new CatalogService(prisma, packs);
   const geo = overrides.geo ?? new GeoApiService(prisma);
-  const orders = overrides.orders ?? new OrdersService(prisma, geo);
+  const orders = overrides.orders ?? new OrdersService(prisma, geo, messaging);
   const mockAggA = overrides.mockAggA ?? new MockPaymentProvider("AGG_A", process.env.MOCK_AGG_A_SECRET ?? "agg-a-secret");
   const mockAggB = overrides.mockAggB ?? new MockPaymentProvider("AGG_B", process.env.MOCK_AGG_B_SECRET ?? "agg-b-secret");
   const mockPiSpi = overrides.mockPiSpi ?? new MockPiSpiProvider(process.env.MOCK_PISPI_SECRET ?? "pispi-secret");
@@ -72,9 +77,10 @@ export function buildDeps(overrides: Partial<AppDeps> = {}): AppDeps {
   const mockPartner = overrides.mockPartner ?? new MockPartnerAdapter("MOCK", process.env.PARTNER_DIALOG_WEBHOOK_SECRET ?? "partner-secret");
   const partnerAdapters = new Map<string, DeliveryPartnerAdapter>([["MOCK", mockPartner]]);
   const delivery =
-    overrides.delivery ?? new DeliveryService(prisma, orders, kyc, mockPiSpi, messaging, partnerAdapters, ledger);
+    overrides.delivery ?? new DeliveryService(prisma, orders, kyc, mockPiSpi, messaging, partnerAdapters, ledger, fraud);
   const trust = overrides.trust ?? new TrustService(prisma);
   const admin = overrides.admin ?? new AdminService(prisma, packs);
+  const rateLimits = overrides.rateLimits ?? buildDefaultRateLimiters();
   payouts.setFrozenProvider((sellerId) => trust.frozenAmountFor(sellerId));
-  return { prisma, packs, messaging, velocity, fraud, auth, privacy, kyc, catalog, geo, orders, router, payments, mockAggA, mockAggB, mockPiSpi, ledger, payouts, reconciliation, delivery, mockPartner, trust, admin };
+  return { prisma, packs, messaging, velocity, fraud, auth, privacy, kyc, catalog, geo, orders, router, payments, mockAggA, mockAggB, mockPiSpi, ledger, payouts, reconciliation, delivery, mockPartner, trust, admin, rateLimits };
 }

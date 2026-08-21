@@ -14,7 +14,10 @@ import { TERMINAL_STATUSES, truncateCoordinates } from "@sunumarket/shared";
  *  - saved delivery points label/landmark-wiped + coordinate-truncated immediately
  *    (same truncation as the FR-25 retention sweep, just not waiting for it);
  *  - terminal orders keep their money columns but lose the GPS/landmark snapshot;
- *  - sms_outbox history re-pointed at the tombstone; pending sends cancelled;
+ *    guest orders placed with the same phone lose the number too;
+ *  - owned shops keep their slug but lose display name + WhatsApp number;
+ *  - sms_outbox history re-pointed at the tombstone with bodies redacted
+ *    (they carry names/addresses/codes); pending sends cancelled;
  *  - one append-only audit_log row records that the deletion happened.
  *
  * Refused (409) while money or dispatch still depends on the account:
@@ -107,17 +110,32 @@ export class PrivacyService {
       }),
       this.prisma.otpCode.deleteMany({ where: { phone: user.phone } }),
       this.prisma.kycRecord.updateMany({ where: { userId }, data: { documents: {} } }),
+      // Seller identity: shop display name + WhatsApp number are PII — tombstone
+      // them like users.name (slug stays as the anonymous skeleton).
+      this.prisma.shop.updateMany({
+        where: { sellerId: userId },
+        data: { name: "[boutique supprimée]", whatsappPhone: null }
+      }),
       // Terminal orders stay for the books; their GPS/landmark snapshot does not.
       this.prisma.order.updateMany({
         where: { buyerId: userId },
         data: { deliveryPointSnapshot: { anonymized: true } }
       }),
-      // Cancel pending sends first, then re-point the whole SMS history at the tombstone.
+      // Guest orders placed with this phone lose the number too.
+      this.prisma.order.updateMany({
+        where: { guestPhone: user.phone },
+        data: { guestPhone: tombstone }
+      }),
+      // Cancel pending sends first, then re-point the whole SMS history at the
+      // tombstone AND redact the body (it carries names/addresses/OTP codes).
       this.prisma.smsOutbox.updateMany({
         where: { phone: user.phone, status: "queued" },
         data: { status: "failed" }
       }),
-      this.prisma.smsOutbox.updateMany({ where: { phone: user.phone }, data: { phone: tombstone } }),
+      this.prisma.smsOutbox.updateMany({
+        where: { phone: user.phone },
+        data: { phone: tombstone, body: "[supprimé]" }
+      }),
       this.prisma.auditLog.create({
         data: { actorId: userId, action: "privacy_delete", detail: { anonymized: true } }
       })

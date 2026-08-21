@@ -27,6 +27,8 @@ describe("dispatch state machine — full coverage (Phase 9)", () => {
     ["arrived", "failed_attempt"],
     ["failed_attempt", "en_route"],
     ["failed_attempt", "arrived"],
+    // Rider incident → the job is released back to the market (re-dispatch).
+    ["failed_attempt", "broadcasting"],
     ["failed_attempt", "cancelled"]
   ];
 

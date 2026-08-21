@@ -70,6 +70,9 @@ export class GeoApiService {
   /**
    * FR-25 retention job: truncate precise coordinates past their retention date.
    * Idempotent — truncated rows get truncate_after = NULL so they never re-process.
+   * Pass-2 fix 11d: rider GPS breadcrumbs (job_events.gps) share the same
+   * retention window — rows older than it are NULLed (gps IS NOT NULL guard
+   * keeps the sweep idempotent).
    */
   async runRetentionTruncation(now = new Date()): Promise<number> {
     const due = await this.prisma.$queryRaw<Array<{ id: string; lng: number; lat: number }>>`
@@ -82,6 +85,9 @@ export class GeoApiService {
         SET point = ST_SetSRID(ST_MakePoint(${t.lng}, ${t.lat}), 4326), truncate_after = NULL
         WHERE id = ${row.id}::uuid`;
     }
+    const gpsCutoff = new Date(now.getTime() - RETENTION_DAYS * 24 * 60 * 60 * 1000);
+    await this.prisma.$executeRaw`
+      UPDATE job_events SET gps = NULL WHERE gps IS NOT NULL AND at < ${gpsCutoff}`;
     return due.length;
   }
 }

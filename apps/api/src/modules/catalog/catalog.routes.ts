@@ -27,6 +27,18 @@ export function registerCatalogRoutes(app: FastifyInstance, deps: AppDeps): void
     }
   });
 
+  // Seller self-service (pass-2 fix 13, seller-space prereq): the caller's own
+  // shop with ALL products (draft/archived included — the public /shops/:slug
+  // view filters to active, which is useless for managing stock).
+  app.get("/me/shop", { preHandler: requireRoles("seller") }, async (req, reply) => {
+    const shop = await deps.prisma.shop.findFirst({
+      where: { sellerId: req.user.sub },
+      include: { products: { orderBy: { createdAt: "desc" } } }
+    });
+    if (!shop) return reply.code(404).send({ code: "no_shop", message: "aucune boutique pour ce compte" });
+    return serializeShop(shop);
+  });
+
   app.get("/shops/:slug", async (req, reply) => {
     const { slug } = req.params as { slug: string };
     try {

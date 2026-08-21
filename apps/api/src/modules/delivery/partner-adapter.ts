@@ -22,7 +22,13 @@ export interface PartnerWebhookEvent {
 export interface DeliveryPartnerAdapter {
   readonly partnerId: string;
   requestPickup(req: PartnerJobRequest): Promise<{ accepted: boolean; partnerRef: string }>;
-  verifyWebhook(rawBody: string, signature: string | undefined): PartnerWebhookEvent | null;
+  /**
+   * Verify a webhook signature. `secret` is resolved PER PARTNER by the caller
+   * (env-indirection via partners.webhook_secret_ref) so partner A's secret can
+   * never validate a webhook aimed at partner B; when omitted the adapter's own
+   * configured secret is used (dev/seed default).
+   */
+  verifyWebhook(rawBody: string, signature: string | undefined, secret?: string): PartnerWebhookEvent | null;
 }
 
 export class MockPartnerAdapter implements DeliveryPartnerAdapter {
@@ -43,9 +49,9 @@ export class MockPartnerAdapter implements DeliveryPartnerAdapter {
     return { accepted: true, partnerRef: `PARTNER-${randomUUID()}` };
   }
 
-  verifyWebhook(rawBody: string, signature: string | undefined): PartnerWebhookEvent | null {
+  verifyWebhook(rawBody: string, signature: string | undefined, secret?: string): PartnerWebhookEvent | null {
     if (!signature) return null;
-    const expected = createHmac("sha256", this.secret).update(rawBody).digest("hex");
+    const expected = createHmac("sha256", secret ?? this.secret).update(rawBody).digest("hex");
     let sig: Buffer;
     try {
       sig = Buffer.from(signature, "hex");

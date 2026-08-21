@@ -118,7 +118,9 @@ export function registerTrustRoutes(app: FastifyInstance, deps: AppDeps): void {
   });
   app.get("/admin/audit", { preHandler: requireRoles("admin") }, async () => deps.admin.auditTrail());
 
-  // Goal §10 KPI: attempt success PER METHOD tracked separately + fallback share (finding F).
+  // Goal §10 KPI (finding F): attempt success/failure PER METHOD + paid volume
+  // per provider. Fallback share is NOT computed here — it needs per-attempt
+  // provider-candidate history that isn't recorded yet (BACKLOG).
   app.get("/admin/metrics/payments", { preHandler: requireRoles("admin") }, async () => {
     const rows = await deps.prisma.paymentAttempt.groupBy({
       by: ["method", "status"],

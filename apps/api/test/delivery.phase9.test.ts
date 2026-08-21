@@ -274,12 +274,17 @@ d("phase 9 — incidents & partner flow (golden paths 6-7)", () => {
       payload: { reason: "client injoignable au point GPS" }
     });
     expect(incident.statusCode).toBe(200);
-    expect(incident.json().status).toBe("failed_attempt");
+    // Pass-2 fix 3: the incident no longer orphans the job — it goes straight
+    // back to broadcasting with the rider released (re-dispatch).
+    expect(incident.json().status).toBe("broadcasting");
+    expect(incident.json().rider_id).toBeNull();
     expect((await app.deps.prisma.order.findUniqueOrThrow({ where: { id: order.id } })).status).toBe("delivery_issue");
 
     // order refund path (COD → no provider refund; state machine to refunded)
     await app.deps.orders.transition(order.id, "refunded");
     expect((await app.deps.prisma.order.findUniqueOrThrow({ where: { id: order.id } })).status).toBe("refunded");
+    // close the re-dispatched job too (seller would cancel after the refund)
+    await app.deps.prisma.deliveryJob.update({ where: { id: job.id }, data: { status: "cancelled" } });
   });
 
   it("PARTNER delivery: adapter accepts, signed webhooks advance the job, replay is deduped, tamper rejected (golden path 6)", async () => {
