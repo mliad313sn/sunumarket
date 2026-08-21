@@ -1,0 +1,699 @@
+/**
+ * SunuMarket buyer PWA — token-based stylesheet.
+ *
+ * System (documented rules, keep coherent):
+ * - One accent: brand green. Used for primary actions, selection, price, and
+ *   verified/success state only — never decoration. All neutrals are tinted
+ *   from the same green hue (no gray-on-color, per craft floor).
+ * - Elevation is declared once: hairline borders on white cards over a soft
+ *   page wash. No drop shadows except the sticky header hairline.
+ * - Shape scale: cards 12px, controls 10px, tiny status chips pill. Nothing else.
+ * - Type: system stack only (bundle budget, offline-first). Fixed rem scale,
+ *   steps ~1.2. Amounts, coordinates, countdowns and dial codes are tabular.
+ * - Motion: state feedback only, 150–250ms, one authored moment (paid check).
+ *   Everything animated is disabled under prefers-reduced-motion.
+ * - Contrast: every text/surface pair here is ≥4.5:1 (≥3:1 for large text).
+ */
+
+:root {
+  --green-900: #06492f;
+  --green-800: #075e3c;
+  --green-700: #0b7d4f; /* brand accent — 5.2:1 on white */
+  --green-100: #cfe8da;
+  --green-50: #edf7f1;
+
+  --ink: #16241d; /* primary text — 15.9:1 */
+  --ink-2: #43554b; /* secondary — 7.8:1 */
+  --ink-3: #5e7066; /* tertiary/captions — 5.3:1 */
+
+  --bg: #f4f7f5; /* page wash */
+  --surface: #ffffff;
+  --line: #dde6e0; /* hairline */
+  --line-strong: #b9c8bf;
+
+  --amber-bg: #fdf6e2;
+  --amber-line: #ecd994;
+  --amber-ink: #6b5410; /* 6.7:1 on amber-bg */
+  --red: #b3261e; /* 6.9:1 on white */
+  --red-bg: #fdf1f0;
+
+  --r-card: 12px;
+  --r-ctl: 10px;
+
+  --font: system-ui, -apple-system, "Segoe UI", Roboto, "Noto Sans", sans-serif;
+  --mono: ui-monospace, "Cascadia Mono", "Roboto Mono", Menlo, Consolas, monospace;
+
+  --speed: 180ms;
+  --ease: cubic-bezier(0.2, 0.8, 0.3, 1);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html {
+  background: var(--bg);
+}
+
+body {
+  margin: 0;
+  font-family: var(--font);
+  color: var(--ink);
+  font-size: 1rem;
+  line-height: 1.45;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Browser surfaces belong to the palette too. */
+::selection {
+  background: var(--green-100);
+  color: var(--green-900);
+}
+input,
+textarea {
+  caret-color: var(--green-700);
+}
+:focus-visible {
+  outline: 2px solid var(--green-700);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+a {
+  color: var(--green-800);
+  text-underline-offset: 3px;
+  text-decoration-thickness: 1px;
+}
+
+.page {
+  max-width: 480px;
+  margin: 0 auto;
+  min-height: 100dvh;
+  padding: 0 0.875rem 2.5rem;
+}
+
+/* ---------- Header ---------- */
+.header {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 0.5rem;
+  margin: 0 -0.875rem 0.875rem;
+  padding: 0.625rem 0.875rem;
+  background: color-mix(in srgb, var(--surface) 92%, transparent);
+  backdrop-filter: blur(8px);
+  border-bottom: 1px solid var(--line);
+}
+
+.brand {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  font-weight: 700;
+  font-size: 1.125rem;
+  letter-spacing: -0.02em;
+  color: var(--ink);
+  text-decoration: none;
+}
+.brand svg {
+  display: block;
+}
+
+.header-tools {
+  display: flex;
+  gap: 0.375rem;
+  align-items: center;
+}
+
+/* Compact chip controls (data-saver toggle + language) */
+.tool-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: var(--surface);
+  color: var(--ink-2);
+  font-size: 0.75rem;
+  font-weight: 600;
+  font-family: inherit;
+  line-height: 1;
+  padding: 0.42rem 0.65rem;
+  cursor: pointer;
+  transition: border-color var(--speed) var(--ease), background var(--speed) var(--ease), color var(--speed) var(--ease);
+}
+.tool-chip input {
+  position: absolute;
+  opacity: 0;
+  pointer-events: none;
+}
+.tool-chip:has(input:focus-visible) {
+  outline: 2px solid var(--green-700);
+  outline-offset: 2px;
+}
+.tool-chip:has(input:checked),
+.tool-chip[aria-pressed="true"] {
+  background: var(--green-50);
+  border-color: var(--green-700);
+  color: var(--green-800);
+}
+.tool-chip .dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 999px;
+  background: var(--line-strong);
+  transition: background var(--speed) var(--ease);
+}
+.tool-chip:has(input:checked) .dot {
+  background: var(--green-700);
+}
+
+/* ---------- Text ---------- */
+.tagline {
+  color: var(--ink-2);
+  font-size: 0.875rem;
+  margin: 0 0 0.75rem;
+}
+h2 {
+  font-size: 1.25rem;
+  letter-spacing: -0.02em;
+  line-height: 1.2;
+  margin: 0 0 0.5rem;
+}
+.section-title {
+  font-size: 0.8125rem;
+  font-weight: 700;
+  text-transform: none;
+  color: var(--ink-2);
+  margin: 1rem 0 0.5rem;
+}
+.muted {
+  color: var(--ink-3);
+  font-size: 0.8125rem;
+}
+.num {
+  font-variant-numeric: tabular-nums;
+}
+
+/* ---------- Cards ---------- */
+.card {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--r-card);
+  padding: 0.875rem;
+  margin-bottom: 0.625rem;
+}
+
+.product-link {
+  display: block;
+  text-decoration: none;
+  color: inherit;
+}
+.product-card {
+  transition: border-color var(--speed) var(--ease);
+}
+.product-link:hover .product-card,
+.product-link:focus-visible .product-card {
+  border-color: var(--line-strong);
+}
+.product-link:active .product-card {
+  transform: scale(0.99);
+}
+.product-title {
+  font-weight: 600;
+  letter-spacing: -0.01em;
+}
+.product-meta {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 0.5rem;
+  margin-top: 0.35rem;
+}
+.price {
+  color: var(--green-800);
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.01em;
+}
+.price-lg {
+  font-size: 1.5rem;
+  margin: 0.25rem 0 0.5rem;
+}
+
+/* Stock chips (pill — smallest shape tier) */
+.chip-stock {
+  font-size: 0.75rem;
+  font-weight: 600;
+  border-radius: 999px;
+  padding: 0.14rem 0.55rem;
+  background: var(--green-50);
+  color: var(--green-800);
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+.chip-stock--out {
+  background: var(--red-bg);
+  color: var(--red);
+}
+
+/* Honest media placeholder (mock catalog has no real image assets) */
+.media {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(180deg, var(--green-50), var(--bg));
+  border-radius: 8px;
+  color: var(--green-100);
+  height: 88px;
+  margin-bottom: 0.6rem;
+}
+.media--lg {
+  height: 172px;
+  border-radius: var(--r-card);
+  margin-bottom: 0.75rem;
+}
+.media svg {
+  color: var(--line-strong);
+}
+
+/* ---------- Search ---------- */
+.search {
+  position: relative;
+  margin-bottom: 0.25rem;
+}
+.search svg {
+  position: absolute;
+  left: 0.7rem;
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--ink-3);
+  pointer-events: none;
+}
+.search input {
+  padding-left: 2.4rem;
+}
+
+/* ---------- Forms ---------- */
+.input {
+  width: 100%;
+  padding: 0.65rem 0.75rem;
+  border-radius: var(--r-ctl);
+  border: 1px solid var(--line-strong);
+  background: var(--surface);
+  color: var(--ink);
+  font-size: 1rem;
+  font-family: inherit;
+  transition: border-color var(--speed) var(--ease), box-shadow var(--speed) var(--ease);
+}
+.input::placeholder {
+  color: var(--ink-3);
+}
+.input:focus {
+  outline: none;
+  border-color: var(--green-700);
+  box-shadow: 0 0 0 3px var(--green-50);
+}
+.field {
+  display: block;
+  margin-bottom: 0.75rem;
+}
+.field-label {
+  display: block;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: var(--ink-2);
+  margin-bottom: 0.3rem;
+}
+.field-error {
+  display: block;
+  color: var(--red);
+  font-size: 0.8125rem;
+  margin-top: 0.3rem;
+}
+.check-row {
+  display: flex;
+  gap: 0.55rem;
+  align-items: flex-start;
+  font-size: 0.875rem;
+  color: var(--ink-2);
+  margin: 0.25rem 0 0.875rem;
+  cursor: pointer;
+}
+.check-row input {
+  width: 1.05rem;
+  height: 1.05rem;
+  margin: 0.1rem 0 0;
+  accent-color: var(--green-700);
+  flex-shrink: 0;
+}
+
+/* ---------- Buttons ---------- */
+.btn,
+.btn-ghost {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.45rem;
+  width: 100%;
+  border-radius: var(--r-ctl);
+  padding: 0.8rem 1rem;
+  font-size: 1rem;
+  font-weight: 600;
+  font-family: inherit;
+  cursor: pointer;
+  text-decoration: none;
+  transition: background var(--speed) var(--ease), transform 100ms var(--ease), border-color var(--speed) var(--ease);
+}
+.btn {
+  background: var(--green-700);
+  color: #fff;
+  border: 0;
+}
+.btn:hover {
+  background: var(--green-800);
+}
+.btn:active {
+  transform: scale(0.98);
+}
+.btn:disabled {
+  background: var(--line);
+  color: var(--ink-3);
+  cursor: not-allowed;
+  transform: none;
+}
+.btn-ghost {
+  background: var(--surface);
+  color: var(--green-800);
+  border: 1px solid var(--green-700);
+}
+.btn-ghost:hover {
+  background: var(--green-50);
+}
+.btn-ghost:active {
+  transform: scale(0.98);
+}
+.btn-row {
+  display: flex;
+  gap: 0.5rem;
+  margin-top: 0.6rem;
+}
+.gap {
+  height: 0.5rem;
+}
+
+/* ---------- Payment method chips ---------- */
+.method {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  width: 100%;
+  text-align: left;
+  padding: 0.8rem 0.875rem;
+  border-radius: var(--r-ctl);
+  border: 1px solid var(--line-strong);
+  background: var(--surface);
+  color: var(--ink);
+  font-family: inherit;
+  font-size: 1rem;
+  margin-bottom: 0.45rem;
+  cursor: pointer;
+  transition: border-color var(--speed) var(--ease), box-shadow var(--speed) var(--ease), background var(--speed) var(--ease);
+}
+.method[aria-pressed="true"] {
+  border-color: var(--green-700);
+  box-shadow: inset 0 0 0 1px var(--green-700);
+  background: var(--green-50);
+}
+.method-label {
+  font-weight: 600;
+}
+.method-tag {
+  color: var(--green-800);
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+.method-body {
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+  min-width: 0;
+}
+.method-fee {
+  color: var(--ink-3);
+  font-size: 0.8125rem;
+  font-variant-numeric: tabular-nums;
+}
+.method-radio {
+  width: 1.05rem;
+  height: 1.05rem;
+  border-radius: 999px;
+  border: 1.5px solid var(--line-strong);
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: border-color var(--speed) var(--ease);
+}
+.method[aria-pressed="true"] .method-radio {
+  border-color: var(--green-700);
+}
+.method[aria-pressed="true"] .method-radio::after {
+  content: "";
+  width: 0.55rem;
+  height: 0.55rem;
+  border-radius: 999px;
+  background: var(--green-700);
+}
+
+/* ---------- Notices ---------- */
+.notice-warn {
+  background: var(--amber-bg);
+  border: 1px solid var(--amber-line);
+  color: var(--amber-ink);
+  border-radius: var(--r-ctl);
+  padding: 0.65rem 0.8rem;
+  font-size: 0.875rem;
+  margin-bottom: 0.625rem;
+}
+.notice-ok {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  background: var(--green-50);
+  border: 1px solid var(--green-100);
+  color: var(--green-900);
+  border-radius: var(--r-card);
+  padding: 0.875rem;
+  font-weight: 600;
+  margin-bottom: 0.625rem;
+}
+.notice-ok svg {
+  color: var(--green-700);
+  flex-shrink: 0;
+}
+
+/* ---------- Trust block (DC-16) ---------- */
+.trust {
+  background: var(--green-50);
+  border: 1px solid var(--green-100);
+  border-radius: var(--r-card);
+  padding: 0.875rem;
+  margin: 0.75rem 0;
+}
+.trust-shop {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-weight: 700;
+}
+.trust-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  margin-left: auto;
+  color: var(--green-800);
+  font-size: 0.8125rem;
+  font-weight: 700;
+  white-space: nowrap;
+}
+.trust-badge svg {
+  color: var(--green-700);
+}
+.trust-stat {
+  color: var(--ink-2);
+  font-size: 0.875rem;
+  margin-top: 0.3rem;
+}
+.trust-stat strong {
+  color: var(--green-900);
+  font-variant-numeric: tabular-nums;
+}
+.trust .btn-ghost {
+  background: var(--surface);
+}
+
+/* ---------- USSD screen (DC-14) ---------- */
+.ussd-panel {
+  text-align: center;
+  padding: 1.25rem 0.875rem;
+}
+.ussd-dial {
+  font-family: var(--mono);
+  font-size: 2rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  color: var(--green-900);
+  margin: 0.35rem 0 0.75rem;
+  font-variant-numeric: tabular-nums;
+}
+.ussd-count {
+  font-size: 0.875rem;
+  color: var(--ink-2);
+}
+.ussd-count strong {
+  color: var(--ink);
+  font-variant-numeric: tabular-nums;
+}
+.ussd-track {
+  height: 4px;
+  border-radius: 999px;
+  background: var(--green-100);
+  margin-top: 0.6rem;
+  overflow: hidden;
+}
+.ussd-bar {
+  height: 100%;
+  width: 100%;
+  border-radius: 999px;
+  background: var(--green-700);
+  transform-origin: left;
+  transition: transform 1s linear;
+}
+
+/* ---------- QR (PI-SPI) ---------- */
+.qr-payload {
+  font-family: var(--mono);
+  font-size: 0.8125rem;
+  word-break: break-all;
+  text-align: center;
+  color: var(--ink-2);
+}
+
+/* ---------- Tracking timeline ---------- */
+.timeline {
+  list-style: none;
+  margin: 0.75rem 0 0;
+  padding: 0;
+}
+.timeline li {
+  position: relative;
+  padding: 0 0 1rem 1.5rem;
+  font-size: 0.9375rem;
+}
+.timeline li::before {
+  content: "";
+  position: absolute;
+  left: 0.28rem;
+  top: 0.42rem;
+  width: 0.55rem;
+  height: 0.55rem;
+  border-radius: 999px;
+  background: var(--green-700);
+}
+.timeline li:not(:last-child)::after {
+  content: "";
+  position: absolute;
+  left: 0.5rem;
+  top: 1.15rem;
+  bottom: 0.1rem;
+  width: 1px;
+  background: var(--line-strong);
+}
+.timeline time {
+  color: var(--ink-3);
+  font-size: 0.8125rem;
+  font-variant-numeric: tabular-nums;
+  margin-left: 0.35rem;
+}
+
+/* ---------- Loading skeletons ---------- */
+.skel {
+  border-radius: 8px;
+  background: linear-gradient(90deg, var(--line) 25%, var(--bg) 50%, var(--line) 75%);
+  background-size: 200% 100%;
+  animation: skel 1.4s ease infinite;
+}
+@keyframes skel {
+  from {
+    background-position: 200% 0;
+  }
+  to {
+    background-position: -200% 0;
+  }
+}
+
+/* ---------- Paid moment (the one authored animation) ---------- */
+.paid-panel {
+  text-align: center;
+  padding: 1.5rem 0.875rem;
+  animation: rise 300ms var(--ease);
+}
+.paid-check {
+  width: 56px;
+  height: 56px;
+  border-radius: 999px;
+  background: var(--green-700);
+  color: #fff;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 0.6rem;
+}
+.paid-check svg path {
+  stroke-dasharray: 24;
+  stroke-dashoffset: 24;
+  animation: draw 400ms var(--ease) 150ms forwards;
+}
+.paid-title {
+  font-weight: 700;
+  font-size: 1.125rem;
+  color: var(--green-900);
+}
+@keyframes rise {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+@keyframes draw {
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .skel,
+  .paid-panel,
+  .paid-check svg path {
+    animation: none;
+  }
+  .paid-check svg path {
+    stroke-dashoffset: 0;
+  }
+  .ussd-bar,
+  .btn,
+  .btn-ghost,
+  .method,
+  .tool-chip,
+  .input,
+  .product-card {
+    transition: none;
+  }
+}
