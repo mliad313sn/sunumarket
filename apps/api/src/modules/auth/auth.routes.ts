@@ -2,6 +2,7 @@ import type { FastifyInstance } from "fastify";
 import { refreshSchema, requestOtpSchema, verifyOtpSchema } from "@sunumarket/shared";
 import type { AppDeps } from "../../deps.js";
 import { AuthError } from "./auth.service.js";
+import { PrivacyError } from "./privacy.service.js";
 import { KycError } from "../kyc/kyc.service.js";
 import { requireRoles } from "./rbac.js";
 
@@ -20,6 +21,9 @@ export function registerAuthRoutes(app: FastifyInstance, deps: AppDeps): void {
   app.setErrorHandler((err, _req, reply) => {
     if (err instanceof AuthError) {
       return reply.code(AUTH_ERROR_STATUS[err.code] ?? 400).send({ code: err.code, message: err.message });
+    }
+    if (err instanceof PrivacyError) {
+      return reply.code(409).send({ code: err.code, message: err.message });
     }
     if (err instanceof KycError) {
       return reply.code(err.code === "limit_exceeded" ? 403 : 400).send({
@@ -82,6 +86,10 @@ export function registerAuthRoutes(app: FastifyInstance, deps: AppDeps): void {
       FROM delivery_points WHERE owner_id = ${user.id}::uuid`;
     return { user, orders, delivery_points: points };
   });
+
+  // Anonymizing delete (BACKLOG privacy item): append-only records survive, PII does not.
+  // 409 while live orders, un-remitted COD, or a non-zero ledger balance depend on the account.
+  app.delete("/me", { preHandler: requireRoles() }, async (req) => deps.privacy.anonymizeAccount(req.user.sub));
 
   app.post("/kyc/upgrade", { preHandler: requireRoles() }, async (req) => {
     const body = req.body as { target_tier: 1 | 2; id_document_key: string; address?: string; vehicle?: string };

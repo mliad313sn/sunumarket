@@ -68,6 +68,7 @@ export function buildOpenApiDocument(): OpenApiDoc {
     { method: "post", path: "/auth/verify", operationId: "verifyOtp", tag: "auth", request: { body: verifyOtpSchema }, response: tokenPairSchema, summary: "Verify OTP, issue token pair; flags new-device re-verify (DC-8.3)" },
     { method: "post", path: "/auth/refresh", operationId: "refreshToken", tag: "auth", request: { body: refreshSchema }, response: tokenPairSchema, summary: "Rotate refresh token" },
     { method: "get", path: "/me", operationId: "getMe", tag: "auth", response: userSchema, summary: "Current user" },
+    { method: "delete", path: "/me", operationId: "deleteMe", tag: "auth", response: z.object({ anonymized: z.boolean() }), summary: "Anonymizing account delete (FR-25 privacy) — 409 while orders/COD/ledger balance are outstanding" },
     { method: "post", path: "/kyc/upgrade", operationId: "requestKycUpgrade", tag: "auth", request: { body: kycUpgradeRequestSchema }, response: z.object({ status: z.string() }), summary: "Request KYC tier upgrade (DC-13)" },
 
     { method: "post", path: "/shops", operationId: "createShop", tag: "catalog", request: { body: createShopSchema }, response: shopSchema, summary: "Create shop (wizard ≤5 steps)" },

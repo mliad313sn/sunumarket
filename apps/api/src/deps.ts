@@ -3,6 +3,7 @@ import { PackRegistry } from "@sunumarket/config";
 import { getPrisma } from "./lib/prisma.js";
 import { MockMessagingProvider, OutboxMessagingProvider, type MessagingProvider } from "./lib/messaging.js";
 import { AuthService } from "./modules/auth/auth.service.js";
+import { PrivacyService } from "./modules/auth/privacy.service.js";
 import { FraudService } from "./modules/fraud/fraud.service.js";
 import { MemoryCounterStore, VelocityRules } from "./modules/fraud/velocity.js";
 import { KycService } from "./modules/kyc/kyc.service.js";
@@ -27,6 +28,7 @@ export interface AppDeps {
   velocity: VelocityRules;
   fraud: FraudService;
   auth: AuthService;
+  privacy: PrivacyService;
   kyc: KycService;
   catalog: CatalogService;
   geo: GeoApiService;
@@ -53,6 +55,7 @@ export function buildDeps(overrides: Partial<AppDeps> = {}): AppDeps {
   const velocity = overrides.velocity ?? new VelocityRules(new MemoryCounterStore());
   const fraud = overrides.fraud ?? new FraudService(prisma);
   const auth = overrides.auth ?? new AuthService(prisma, messaging, packs, velocity, fraud);
+  const privacy = overrides.privacy ?? new PrivacyService(prisma);
   const kyc = overrides.kyc ?? new KycService(prisma, packs);
   const catalog = overrides.catalog ?? new CatalogService(prisma, packs);
   const geo = overrides.geo ?? new GeoApiService(prisma);
@@ -73,5 +76,5 @@ export function buildDeps(overrides: Partial<AppDeps> = {}): AppDeps {
   const trust = overrides.trust ?? new TrustService(prisma);
   const admin = overrides.admin ?? new AdminService(prisma, packs);
   payouts.setFrozenProvider((sellerId) => trust.frozenAmountFor(sellerId));
-  return { prisma, packs, messaging, velocity, fraud, auth, kyc, catalog, geo, orders, router, payments, mockAggA, mockAggB, mockPiSpi, ledger, payouts, reconciliation, delivery, mockPartner, trust, admin };
+  return { prisma, packs, messaging, velocity, fraud, auth, privacy, kyc, catalog, geo, orders, router, payments, mockAggA, mockAggB, mockPiSpi, ledger, payouts, reconciliation, delivery, mockPartner, trust, admin };
 }
