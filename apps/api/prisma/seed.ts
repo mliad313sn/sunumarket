@@ -133,9 +133,27 @@ async function main() {
         await prisma.product.create({
           data: { shopId: shop.id, title, priceMinor: price, currency: "XOF", stock, status: "active" }
         });
+      } else if (existing.stock < stock) {
+        // Restore dev-catalog stock consumed by demo walks (scripts/browser-golden-path.sh).
+        await prisma.product.update({ where: { id: existing.id }, data: { stock } });
       }
     }
   }
+
+  // Data hygiene (dev/test DBs): archive synthetic test-fixture products so the public
+  // marketplace shows only real catalog items. Fixture titles carry a machine suffix
+  // ("<prefix>-<epoch-ms>-<seq>", e.g. "gp-p-1787279688466-56" or
+  // "race-test-1787279642653-0.8554") that no human title uses.
+  // Idempotent; products table is mutable (not append-only). Same rule as
+  // scripts/archive-test-fixtures.sql — keep them in sync.
+  const archived = await prisma.$executeRaw`
+    UPDATE products SET status = 'archived'
+    WHERE status = 'active' AND title ~ '-[0-9]{13}-[0-9]+(\.[0-9]+)?$'`;
+  // Legacy fixture titles from suites before they switched to machine suffixes.
+  const archivedLegacy = await prisma.$executeRaw`
+    UPDATE products SET status = 'archived'
+    WHERE status = 'active' AND title IN ('Sandales cuir GP1', 'Boubou brodé premium')`;
+  if (archived + archivedLegacy > 0) console.log(`archived ${archived + archivedLegacy} test-fixture products`);
 
   // Delivery points: one saved pin per persona, inside a seeded zone (consented).
   const pins = [

@@ -141,7 +141,7 @@ describe("golden path 1 — seller onboards and publishes unaided", () => {
     const product = await http<{ id: string }>(`/shops/${shop.body.id}/products`, {
       method: "POST",
       token,
-      body: JSON.stringify({ title: "Sandales cuir GP1", price: { amount_minor: "7500", currency: "XOF" }, stock: 4, image_keys: [] })
+      body: JSON.stringify({ title: key("gp1-sandales"), price: { amount_minor: "7500", currency: "XOF" }, stock: 4, image_keys: [] })
     });
     expect(product.status).toBe(201);
 

@@ -77,7 +77,17 @@ export function registerCatalogRoutes(app: FastifyInstance, deps: AppDeps): void
     const { id } = req.params as { id: string };
     try {
       const p = await catalog.getProduct(id);
-      return { ...serializeProduct(p), shop: p.shop, share_url: `/s/${p.shop.slug}/p/${p.id}` };
+      // DC-16 trust block in wire format (snake_case) — the buyer PWA reads these keys.
+      const shop = {
+        id: p.shop.id,
+        slug: p.shop.slug,
+        name: p.shop.name,
+        country: p.shop.country,
+        verified: p.shop.verified,
+        completed_orders: p.shop.completedOrders,
+        whatsapp_phone: p.shop.whatsappPhone
+      };
+      return { ...serializeProduct(p), shop, share_url: `/s/${p.shop.slug}/p/${p.id}` };
     } catch (e) {
       if (e instanceof CatalogError) return reply.code(404).send({ code: e.code, message: e.message });
       throw e;

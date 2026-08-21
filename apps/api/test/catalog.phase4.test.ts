@@ -8,6 +8,10 @@ let app: Awaited<ReturnType<typeof buildApp>>;
 let sellerToken: string;
 let sellerId: string;
 
+// Machine-suffixed fixture title: run-unique (hermetic) and matched by the
+// archive-test-fixtures data-hygiene rule so it never pollutes the marketplace.
+const BOUBOU_TITLE = `boubou-test-${Date.now()}-0`;
+
 beforeAll(async () => {
   app = await buildApp();
   const seller = await app.deps.prisma.user.findUniqueOrThrow({ where: { phone: "+221771234501" } });
@@ -94,7 +98,7 @@ d("phase 4 — shops & products", () => {
       url: `/shops/${shop.id}/products`,
       headers: { authorization: `Bearer ${sellerToken}` },
       payload: {
-        title: "Boubou brodé premium",
+        title: BOUBOU_TITLE,
         price: { amount_minor: "35000", currency: "XOF" },
         stock: 3,
         image_keys: ["img/boubou-1.webp"]
@@ -106,7 +110,7 @@ d("phase 4 — shops & products", () => {
     const page = await app.inject({ method: "GET", url: "/shops/chez-awa-mode" });
     expect(page.statusCode).toBe(200);
     const body = page.json();
-    expect(body.products.some((p: { title: string }) => p.title === "Boubou brodé premium")).toBe(true);
+    expect(body.products.some((p: { title: string }) => p.title === BOUBOU_TITLE)).toBe(true);
     expect(body.completed_orders).toBeDefined(); // trust block slot (DC-16)
   });
 
@@ -126,12 +130,16 @@ d("phase 4 — shops & products", () => {
   });
 
   it("product page carries share url + shop trust block (FR-10, DC-16)", async () => {
-    const product = await app.deps.prisma.product.findFirstOrThrow({ where: { title: "Boubou brodé premium" } });
+    const product = await app.deps.prisma.product.findFirstOrThrow({ where: { title: BOUBOU_TITLE } });
     const res = await app.inject({ method: "GET", url: `/products/${product.id}` });
     expect(res.statusCode).toBe(200);
     const body = res.json();
     expect(body.share_url).toContain("/s/chez-awa-mode/p/");
     expect(body.shop.verified).toBe(true);
+    // DC-16 trust block must be wire-format (snake_case) — the buyer PWA reads these keys.
+    expect(typeof body.shop.completed_orders).toBe("number");
+    expect(body.shop).toHaveProperty("whatsapp_phone");
+    expect(body.shop).not.toHaveProperty("completedOrders");
     const missing = await app.inject({ method: "GET", url: "/products/00000000-0000-4000-8000-000000000000" });
     expect(missing.statusCode).toBe(404);
   });
